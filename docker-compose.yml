@@ -1,0 +1,99 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:17.0
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-cznetdb}
+    ports:
+      - "${DB_PORT:-5002}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    working_dir: /app
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgres://postgres:postgres@postgres:5432/cznetdb}
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+
+  frontend-build:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NODE_ENV: ${NODE_ENV:-production}
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3000
+    command: sh -c "npm run build && cp -r /app/.next/static /app/out/ && cp -r /app/public/* /app/out/ || true"
+    volumes:
+      - frontend-build:/app/out
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: "no"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - frontend-build:/usr/share/nginx/html
+    depends_on:
+      - frontend-build
+      - backend
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 256M
+
+volumes:
+  pgdata:
+    name: ${PROJECT_NAME:-cznet}_pgdata
+  frontend-build:
+    name: ${PROJECT_NAME:-cznet}_frontend_build
+
+networks:
+  default:
+    name: ${PROJECT_NAME:-cznet}_network
+    driver: bridge
