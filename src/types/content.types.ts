@@ -20,6 +20,7 @@ export interface ContentCreator {
 
 // Interface para item de conteúdo
 export interface ContentItem {
+  mediaItems: any;
   id: string;
   title: string;
   description?: string;
@@ -67,3 +68,4 @@ interface Tutorial extends ContentItem {
   type: 'tutorial';
   steps: TutorialStep[];
 }
+export type UserSector = 'suporte' | 'tecnico' | 'noc' | 'comercial' | 'adm';

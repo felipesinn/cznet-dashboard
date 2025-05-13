@@ -1,15 +1,11 @@
 // src/pages/sectors/SectorViewUpdated.tsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Headphones, Upload, FileText, Type, Layers, LogOut, Bell, Menu, Search, Plus, BookOpen } from 'lucide-react';
+import { Headphones, Upload, Bell, Menu, Search } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import type { ContentItem, ContentType, SectorType, CreateContentData, UpdateContentData } from '../../types/content.types';
+import type { ContentItem, ContentType, CreateContentData, UpdateContentData } from '../../types/content.types';
+import type { SectorType } from '../../types/auth.types';
 import { contentService } from '../../services/content.service';
-import ContentCard from '../../components/ContentCard';
-import ContentForm from '../../components/ContentForm';
-import ContentModal from '../../components/ContentModal';
-import TutorialForm from '../../components/TutorialForm';
-import TutorialViewer from '../../components/TutorialViewer';
 
 // Ícones para cada setor
 const SectorIcons = {
@@ -42,7 +38,7 @@ const SectorViewUpdated: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('all');
   
   // Estados para formulários e modais
-  const [showContentForm, setShowContentForm] = useState<boolean>(false);
+  const [, setShowContentForm] = useState<boolean>(false);
   const [showTutorialForm, setShowTutorialForm] = useState<boolean>(false);
   const [editingContent, setEditingContent] = useState<ContentItem | null>(null);
   const [viewingContent, setViewingContent] = useState<ContentItem | null>(null);
@@ -76,7 +72,7 @@ const SectorViewUpdated: React.FC = () => {
       try {
         let contentList: ContentItem[];
         
-        if (activeTab === 'all') {
+          contentList = await contentService.getContentBySector(currentSector);
           contentList = await contentService.getContentBySector(currentSector as SectorType);
         } else if (activeTab === 'tutorial') {
           // Buscar especificamente tutoriais
@@ -608,6 +604,8 @@ const SectorViewUpdated: React.FC = () => {
       {viewingTutorial && (
         <TutorialViewer
           tutorial={viewingTutorial}
+          userSector={currentSector as SectorType}
+          isSuperAdmin={isSuperAdmin}
           onClose={() => setViewingTutorial(null)}
           onEdit={canEdit ? () => handleEditContent(viewingTutorial) : undefined}
         />

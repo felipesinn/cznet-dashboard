@@ -1,0 +1,565 @@
+// src/components/layout/ResponsiveLayout.tsx
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { 
+  Headphones, 
+  Upload, 
+  Bell, 
+  Menu as MenuIcon, 
+  Search, 
+  X, 
+  LogOut, 
+  ChevronDown, 
+  User,
+  Home,
+  Users,
+  Settings,
+  Database
+} from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import type { UserSector } from '../../types/content.types';
+
+interface ResponsiveLayoutProps {
+  children: React.ReactNode;
+  title?: string;
+  currentSector?: UserSector;
+}
+
+const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({ 
+  children, 
+  title, 
+  currentSector = 'suporte' 
+}) => {
+  const navigate = useNavigate();
+  const { authState, logout } = useAuth();
+  const { user } = authState;
+  
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  
+  // Verificar permissões
+  const isSuperAdmin = user?.role === 'super_admin';
+  const isAdmin = isSuperAdmin || user?.role === 'admin';
+  
+  // Ícones para cada setor
+  const sectorIcons = {
+    suporte: <Headphones size={20} />,
+    tecnico: <Upload size={20} />,
+    noc: <Bell size={20} />,
+    comercial: <MenuIcon size={20} />,
+    adm: <Search size={20} />
+  };
+  
+  // Nomes formatados para cada setor
+  const sectorNames = {
+    suporte: 'Suporte',
+    tecnico: 'Técnico',
+    noc: 'NOC',
+    comercial: 'Comercial',
+    adm: 'ADM'
+  };
+  
+  // Monitorar redimensionamento da janela
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+      
+      // Fechar sidebar automaticamente em dispositivos móveis ao redimensionar
+      if (window.innerWidth >= 768) {
+        setSidebarOpen(false);
+      }
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
+  // Função para navegar para um setor
+  const navigateToSector = (sector: UserSector) => {
+    // Se não for superadmin, só pode acessar seu próprio setor
+    if (!isSuperAdmin && sector !== user?.sector) {
+      return;
+    }
+    
+    navigate(`/${sector}`);
+    setSidebarOpen(false);
+  };
+  
+  // Função para navegar para o dashboard
+  const navigateToDashboard = () => {
+    navigate('/admin/dashboard');
+    setSidebarOpen(false);
+  };
+  
+  // Função para gerenciar usuários (apenas para super_admin)
+  const navigateToUserManagement = () => {
+    navigate('/admin/users');
+    setSidebarOpen(false);
+  };
+
+  // Função para registrar novos usuários
+  const navigateToUserRegistration = () => {
+    navigate('/admin/users/register');
+    setSidebarOpen(false);
+  };
+  
+  // Função para logout
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+  
+  // Fechar o menu ao clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('#profile-dropdown') && profileDropdownOpen) {
+        setProfileDropdownOpen(false);
+      }
+      
+      // Fechar o sidebar em dispositivos móveis ao clicar fora
+      if (windowWidth < 768 && sidebarOpen && !target.closest('#mobile-sidebar') && !target.closest('#mobile-menu-button')) {
+        setSidebarOpen(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [profileDropdownOpen, sidebarOpen, windowWidth]);
+  
+  return (
+    <div className="flex flex-col min-h-screen bg-gray-100">
+      {/* Header para todos os dispositivos */}
+      <header className="bg-white shadow-sm border-b border-gray-200 z-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-4">
+            {/* Logo e título */}
+            <div className="flex items-center">
+              {/* Botão do menu (apenas mobile) */}
+              {windowWidth < 768 && (
+                <button 
+                  id="mobile-menu-button"
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  className="p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 mr-2"
+                >
+                  {sidebarOpen ? <X size={20} /> : <MenuIcon size={20} />}
+                </button>
+              )}
+              
+              <div className="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center text-white font-bold mr-2">
+                CZ
+              </div>
+              <h1 className="text-xl font-bold text-gray-900 hidden sm:block">
+                {title || `CZNet ${sectorNames[currentSector as keyof typeof sectorNames] || 'Portal'}`}
+              </h1>
+              <h1 className="text-lg font-bold text-gray-900 sm:hidden">
+                {title ? (title.length > 15 ? title.substring(0, 15) + '...' : title) : `CZ ${sectorNames[currentSector as keyof typeof sectorNames]?.substring(0, 3) || 'Portal'}`}
+              </h1>
+            </div>
+            
+            {/* Área do usuário */}
+            <div className="flex items-center space-x-4">
+              {/* Ícone de notificações */}
+              <button className="p-2 rounded-full hover:bg-gray-200 relative">
+                <Bell size={20} />
+                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+              </button>
+              
+              {/* Avatar e nome do usuário */}
+              <div className="relative" id="profile-dropdown">
+                <button 
+                  onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+                  className="flex items-center space-x-2 group"
+                >
+                  <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-700 font-medium group-hover:bg-gray-300">
+                    {user?.name?.charAt(0) || 'U'}
+                  </div>
+                  <span className="font-medium text-gray-700 hidden md:block">{user?.name || 'Usuário'}</span>
+                  <ChevronDown size={16} className="text-gray-500 hidden md:block" />
+                </button>
+                
+                {/* Dropdown de perfil */}
+                {profileDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
+                    <div className="px-4 py-2 border-b border-gray-100">
+                      <p className="text-sm font-medium text-gray-900">{user?.name}</p>
+                      <p className="text-xs text-gray-500">{user?.email}</p>
+                    </div>
+                    
+                    {isAdmin && (
+                      <button
+                        onClick={navigateToDashboard}
+                        className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        <Settings size={16} className="mr-2 text-gray-500" />
+                        Dashboard Admin
+                      </button>
+                    )}
+                    
+                    {(isSuperAdmin || isAdmin) && (
+                      <button
+                        onClick={navigateToUserRegistration}
+                        className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        <User size={16} className="mr-2 text-gray-500" />
+                        Registrar Usuário
+                      </button>
+                    )}
+                    
+                    {isSuperAdmin && (
+                      <button
+                        onClick={navigateToUserManagement}
+                        className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        <Users size={16} className="mr-2 text-gray-500" />
+                        Gerenciar Usuários
+                      </button>
+                    )}
+                    
+                    <button
+                      onClick={handleLogout}
+                      className="flex items-center w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                    >
+                      <LogOut size={16} className="mr-2" />
+                      Sair
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar para desktop */}
+        {windowWidth >= 768 && (
+          <div className="bg-white border-r border-gray-200 w-64 flex-shrink-0 z-10">
+            <div className="p-4 border-b border-gray-200">
+              <div className="flex flex-col items-center">
+                <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-red-500 mb-2 bg-gray-200 flex items-center justify-center">
+                  <span className="text-2xl font-semibold text-gray-700">
+                    {user?.name?.charAt(0) || 'U'}
+                  </span>
+                </div>
+                <h3 className="font-semibold text-gray-800 text-center">{user?.name || 'Usuário'}</h3>
+                <span className="text-xs text-gray-500">{user?.role || 'Padrão'}</span>
+              </div>
+            </div>
+
+            <nav className="mt-4 px-2 space-y-1">
+              {/* Dashboard Admin (apenas para admin e super_admin) */}
+              {isAdmin && (
+                <button 
+                  onClick={navigateToDashboard}
+                  className="flex items-center w-full justify-start space-x-3 p-3 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  <Search size={20} />
+                  <span>Dashboard Admin</span>
+                </button>
+              )}
+              
+              {/* Gerenciamento de Usuários (apenas para super_admin) */}
+              {isSuperAdmin && (
+                <button 
+                  onClick={navigateToUserManagement}
+                  className="flex items-center w-full justify-start space-x-3 p-3 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  <Users size={20} />
+                  <span>Gerenciar Usuários</span>
+                </button>
+              )}
+
+              {/* Registro de Usuários (apenas para admins) */}
+              {(isSuperAdmin || isAdmin) && (
+                <button 
+                  onClick={navigateToUserRegistration}
+                  className="flex items-center w-full justify-start space-x-3 p-3 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  <User size={20} />
+                  <span>Registrar Usuário</span>
+                </button>
+              )}
+
+              {/* Gerenciar Conteúdo (apenas para admins) */}
+              {isAdmin && (
+                <button 
+                  className="flex items-center w-full justify-start space-x-3 p-3 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  <Database size={20} />
+                  <span>Gerenciar Conteúdo</span>
+                </button>
+              )}
+              
+              {/* Setores - mostrar todos para super admin, apenas o próprio para outros */}
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                  Setores
+                </h3>
+              </div>
+              
+              {isSuperAdmin ? (
+                // Todos os setores para super admin
+                <>
+                  <button 
+                    onClick={() => navigateToSector('suporte')}
+                    className={`flex items-center w-full justify-start space-x-3 p-3 rounded-lg ${
+                      currentSector === 'suporte' ? 'bg-red-100 text-red-600' : 'hover:bg-gray-200 transition-colors'
+                    }`}
+                  >
+                    <Headphones size={20} />
+                    <span>Suporte</span>
+                  </button>
+                  
+                  <button 
+                    onClick={() => navigateToSector('tecnico')}
+                    className={`flex items-center w-full justify-start space-x-3 p-3 rounded-lg ${
+                      currentSector === 'tecnico' ? 'bg-red-100 text-red-600' : 'hover:bg-gray-200 transition-colors'
+                    }`}
+                  >
+                    <Upload size={20} />
+                    <span>Técnico</span>
+                  </button>
+                  
+                  <button 
+                    onClick={() => navigateToSector('noc')}
+                    className={`flex items-center w-full justify-start space-x-3 p-3 rounded-lg ${
+                      currentSector === 'noc' ? 'bg-red-100 text-red-600' : 'hover:bg-gray-200 transition-colors'
+                    }`}
+                  >
+                    <Bell size={20} />
+                    <span>NOC</span>
+                  </button>
+                  
+                  <button 
+                    onClick={() => navigateToSector('comercial')}
+                    className={`flex items-center w-full justify-start space-x-3 p-3 rounded-lg ${
+                      currentSector === 'comercial' ? 'bg-red-100 text-red-600' : 'hover:bg-gray-200 transition-colors'
+                    }`}
+                  >
+                    <MenuIcon size={20} />
+                    <span>Comercial</span>
+                  </button>
+                  
+                  <button 
+                    onClick={() => navigateToSector('adm')}
+                    className={`flex items-center w-full justify-start space-x-3 p-3 rounded-lg ${
+                      currentSector === 'adm' ? 'bg-red-100 text-red-600' : 'hover:bg-gray-200 transition-colors'
+                    }`}
+                  >
+                    <Search size={20} />
+                    <span>ADM</span>
+                  </button>
+                </>
+              ) : (
+                // Apenas o próprio setor para outros usuários
+                <button 
+                  className="flex items-center w-full justify-start space-x-3 p-3 rounded-lg bg-red-100 text-red-600"
+                >
+                  {sectorIcons[user?.sector as keyof typeof sectorIcons] || <Search size={20} />}
+                  <span>{user?.sector && user.sector in sectorNames ? sectorNames[user.sector as keyof typeof sectorNames] : user?.sector ?? 'Setor Desconhecido'}</span>
+                </button>
+              )}
+              
+              {/* Botão de logout */}
+              <button 
+                onClick={handleLogout}
+                className="flex items-center w-full justify-start space-x-3 p-3 rounded-lg hover:bg-gray-200 transition-colors text-red-600 mt-8"
+              >
+                <LogOut size={20} />
+                <span>Sair</span>
+              </button>
+            </nav>
+          </div>
+        )}
+
+        {/* Sidebar para mobile */}
+        {windowWidth < 768 && sidebarOpen && (
+          <div 
+            id="mobile-sidebar"
+            className="fixed inset-0 z-10 bg-gray-900 bg-opacity-50 overflow-y-auto"
+          >
+            <div className="fixed inset-y-0 left-0 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out z-20">
+              <div className="flex flex-col h-full">
+                <div className="p-4 border-b border-gray-200">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center">
+                      <div className="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center text-white font-bold mr-2">
+                        CZ
+                      </div>
+                      <h2 className="text-lg font-semibold text-gray-800">CZNet Portal</h2>
+                    </div>
+                    <button 
+                      onClick={() => setSidebarOpen(false)}
+                      className="p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="p-4 border-b border-gray-200">
+                  <div className="flex flex-col items-center">
+                    <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-red-500 mb-2 bg-gray-200 flex items-center justify-center">
+                      <span className="text-2xl font-semibold text-gray-700">
+                        {user?.name?.charAt(0) || 'U'}
+                      </span>
+                    </div>
+                    <h3 className="font-semibold text-gray-800 text-center">{user?.name || 'Usuário'}</h3>
+                    <span className="text-xs text-gray-500">{user?.role || 'Padrão'}</span>
+                  </div>
+                </div>
+                
+                <nav className="flex-1 px-2 py-4 overflow-y-auto">
+                  {/* Home */}
+                  <button 
+                    onClick={() => {
+                      navigate('/');
+                      setSidebarOpen(false);
+                    }}
+                    className="flex items-center w-full justify-start space-x-3 p-3 rounded-lg hover:bg-gray-200 transition-colors mb-2"
+                  >
+                    <Home size={20} />
+                    <span>Página Inicial</span>
+                  </button>
+                  
+                  {/* Dashboard Admin (apenas para admin e super_admin) */}
+                  {isAdmin && (
+                    <button 
+                      onClick={navigateToDashboard}
+                      className="flex items-center w-full justify-start space-x-3 p-3 rounded-lg hover:bg-gray-200 transition-colors mb-2"
+                    >
+                      <Search size={20} />
+                      <span>Dashboard Admin</span>
+                    </button>
+                  )}
+                  
+                  {/* Gerenciamento de Usuários (apenas para super_admin) */}
+                  {isSuperAdmin && (
+                    <button 
+                      onClick={navigateToUserManagement}
+                      className="flex items-center w-full justify-start space-x-3 p-3 rounded-lg hover:bg-gray-200 transition-colors mb-2"
+                    >
+                      <Users size={20} />
+                      <span>Gerenciar Usuários</span>
+                    </button>
+                  )}
+
+                  {/* Registro de Usuários (apenas para admins) */}
+                  {(isSuperAdmin || isAdmin) && (
+                    <button 
+                      onClick={navigateToUserRegistration}
+                      className="flex items-center w-full justify-start space-x-3 p-3 rounded-lg hover:bg-gray-200 transition-colors mb-2"
+                    >
+                      <User size={20} />
+                      <span>Registrar Usuário</span>
+                    </button>
+                  )}
+
+                  {/* Gerenciar Conteúdo (apenas para admins) */}
+                  {isAdmin && (
+                    <button 
+                      className="flex items-center w-full justify-start space-x-3 p-3 rounded-lg hover:bg-gray-200 transition-colors mb-2"
+                    >
+                      <Database size={20} />
+                      <span>Gerenciar Conteúdo</span>
+                    </button>
+                  )}
+                  
+                  {/* Setores - mostrar todos para super admin, apenas o próprio para outros */}
+                  <div className="mt-4 mb-2">
+                    <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      Setores
+                    </h3>
+                  </div>
+                  
+                  {isSuperAdmin ? (
+                    // Todos os setores para super admin
+                    <>
+                      <button 
+                        onClick={() => navigateToSector('suporte')}
+                        className={`flex items-center w-full justify-start space-x-3 p-3 rounded-lg ${
+                          currentSector === 'suporte' ? 'bg-red-100 text-red-600' : 'hover:bg-gray-200 transition-colors'
+                        } mb-1`}
+                      >
+                        <Headphones size={20} />
+                        <span>Suporte</span>
+                      </button>
+                      
+                      <button 
+                        onClick={() => navigateToSector('tecnico')}
+                        className={`flex items-center w-full justify-start space-x-3 p-3 rounded-lg ${
+                          currentSector === 'tecnico' ? 'bg-red-100 text-red-600' : 'hover:bg-gray-200 transition-colors'
+                        } mb-1`}
+                      >
+                        <Upload size={20} />
+                        <span>Técnico</span>
+                      </button>
+                      
+                      <button 
+                        onClick={() => navigateToSector('noc')}
+                        className={`flex items-center w-full justify-start space-x-3 p-3 rounded-lg ${
+                          currentSector === 'noc' ? 'bg-red-100 text-red-600' : 'hover:bg-gray-200 transition-colors'
+                        } mb-1`}
+                      >
+                        <Bell size={20} />
+                        <span>NOC</span>
+                      </button>
+                      
+                      <button 
+                        onClick={() => navigateToSector('comercial')}
+                        className={`flex items-center w-full justify-start space-x-3 p-3 rounded-lg ${
+                          currentSector === 'comercial' ? 'bg-red-100 text-red-600' : 'hover:bg-gray-200 transition-colors'
+                        } mb-1`}
+                      >
+                        <MenuIcon size={20} />
+                        <span>Comercial</span>
+                      </button>
+                      
+                      <button 
+                        onClick={() => navigateToSector('adm')}
+                        className={`flex items-center w-full justify-start space-x-3 p-3 rounded-lg ${
+                          currentSector === 'adm' ? 'bg-red-100 text-red-600' : 'hover:bg-gray-200 transition-colors'
+                        } mb-1`}
+                      >
+                        <Search size={20} />
+                        <span>ADM</span>
+                      </button>
+                    </>
+                  ) : (
+                    // Apenas o próprio setor para outros usuários
+                    <button 
+                      className="flex items-center w-full justify-start space-x-3 p-3 rounded-lg bg-red-100 text-red-600 mb-1"
+                    >
+                      {sectorIcons[user?.sector as UserSector] || <Search size={20} />}
+                      <span>{sectorNames[user?.sector as UserSector] || user?.sector}</span>
+                    </button>
+                  )}
+                  
+                  {/* Botão de logout */}
+                  <div className="mt-8">
+                    <button 
+                      onClick={handleLogout}
+                      className="flex items-center w-full justify-start space-x-3 p-3 rounded-lg hover:bg-gray-200 transition-colors text-red-600"
+                    >
+                      <LogOut size={20} />
+                      <span>Sair</span>
+                    </button>
+                  </div>
+                </nav>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Conteúdo principal */}
+        <main className="flex-1 overflow-auto bg-gray-100">
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+};
+
+export default ResponsiveLayout;

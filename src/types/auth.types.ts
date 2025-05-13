@@ -88,6 +88,7 @@ export interface UpdateUserData {
   isActive?: boolean;
 }
 export interface ContentItem {
+  mediaItems: never[];
   createdAt(createdAt: unknown): import("react").ReactNode;
   filePath: boolean;
   id: string;
