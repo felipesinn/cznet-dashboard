@@ -87,3 +87,23 @@ export interface UpdateUserData {
   avatar?: string;
   isActive?: boolean;
 }
+export interface ContentItem {
+  createdAt(createdAt: unknown): import("react").ReactNode;
+  filePath: boolean;
+  id: string;
+  title: string;
+  description?: string;
+  type: string;
+  sector: string;
+  textContent?: string;
+  file?: File;
+}
+export interface CreateContentData {
+  title: string;
+  description?: string;
+  type: string;
+  sector: string;
+  textContent?: string;
+  file?: File;
+}
+export type SectorType = 'example1' | 'example2'; // Replace with actual type definition

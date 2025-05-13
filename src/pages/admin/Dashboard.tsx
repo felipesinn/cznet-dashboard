@@ -14,9 +14,7 @@ interface UserWithAvatar {
 }
 
 // Interface para props do componente (mesmo que estejam vazias)
-interface DashboardProps {
-  // Você pode adicionar props aqui se necessário
-}
+type DashboardProps = object
 
 // Setores disponíveis
 enum Sector {
