@@ -1,9 +1,6 @@
-// src/components/ContentCard.tsx
 import React from 'react';
-import { type ContentItem } from '../types/auth.types';
-import { ContentType } from '../types/content.types';
-import { contentService } from '../services/content.service';
-import { FileText, Upload, Type } from 'lucide-react';
+import { FileText, Upload, Type, Image } from 'lucide-react';
+import { type ContentItem, ContentType } from '../types/content.types';
 
 interface ContentCardProps {
   content: ContentItem;
@@ -26,11 +23,11 @@ const ContentCard: React.FC<ContentCardProps> = ({
     return date.toLocaleDateString('pt-BR');
   };
 
-  // Função para obter o ícone com base no tipo
-  const getTypeIcon = (type: ContentType) => {
-    switch (type) {
+  // Obter ícone com base no tipo
+  const getIcon = () => {
+    switch (content.type) {
       case ContentType.PHOTO:
-        return <Upload size={40} className="text-purple-400" />;
+        return <Image size={40} className="text-purple-400" />;
       case ContentType.VIDEO:
         return <Upload size={40} className="text-green-400" />;
       case ContentType.TEXT:
@@ -42,9 +39,9 @@ const ContentCard: React.FC<ContentCardProps> = ({
     }
   };
 
-  // Função para obter a cor de fundo com base no tipo
-  const getTypeBadgeClasses = (type: ContentType) => {
-    switch (type) {
+  // Classes CSS para o badge do tipo
+  const getBadgeClasses = () => {
+    switch (content.type) {
       case ContentType.PHOTO:
         return 'bg-purple-100 text-purple-800';
       case ContentType.VIDEO:
@@ -58,9 +55,9 @@ const ContentCard: React.FC<ContentCardProps> = ({
     }
   };
 
-  // Função para obter o texto do tipo
-  const getTypeText = (type: ContentType) => {
-    switch (type) {
+  // Nome formatado do tipo
+  const getTypeName = () => {
+    switch (content.type) {
       case ContentType.PHOTO:
         return 'Foto';
       case ContentType.VIDEO:
@@ -70,72 +67,51 @@ const ContentCard: React.FC<ContentCardProps> = ({
       case ContentType.TITLE:
         return 'Título';
       default:
-        return type;
+        return content.type;
     }
   };
 
-  // Renderizar o thumbnail apropriado com base no tipo
-  const renderThumbnail = () => {
+  // Renderizar thumbnail/preview
+  const renderPreview = () => {
+    // Se for foto e tiver caminho do arquivo, mostrar preview
     if (content.type === ContentType.PHOTO && content.filePath) {
-      // Carregar imagem
-      const imageUrl = typeof content.filePath === 'string' ? contentService.getFileUrl(content.filePath) : '';
       return (
         <div className="h-32 bg-gray-100 rounded overflow-hidden">
           <img 
-            src={imageUrl} 
+            src={`/api/uploads/${content.filePath}`}
             alt={content.title} 
             className="w-full h-full object-cover"
             onError={(e) => {
-              // Caso a imagem não carregue, mostrar ícone
               e.currentTarget.style.display = 'none';
-              e.currentTarget.parentElement!.appendChild(
-                document.createTextNode('Erro ao carregar imagem')
-              );
+              e.currentTarget.parentElement!.innerHTML = 'Erro ao carregar imagem';
             }}
           />
         </div>
       );
-    } else if (content.type === ContentType.VIDEO && content.filePath) {
-      // Para vídeos, mostrar thumbnail (poderia ser gerado pelo servidor)
-      return (
-        <div className="h-32 bg-gray-100 rounded flex items-center justify-center">
-          <div className="relative">
-            {getTypeIcon(content.type as ContentType)}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
-                <div className="w-0 h-0 border-t-4 border-t-transparent border-l-8 border-l-red-600 border-b-4 border-b-transparent ml-1"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-    } else {
-      // Para outros tipos, mostrar ícone
-      return (
-        <div className="h-32 bg-gray-100 rounded flex items-center justify-center">
-          {getTypeIcon(content.type as ContentType)}
-        </div>
-      );
-    }
+    } 
+    
+    // Para outros tipos, mostrar ícone
+    return (
+      <div className="mt-4 h-32 bg-gray-100 rounded flex items-center justify-center">
+        {getIcon()}
+      </div>
+    );
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+    <div className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow">
       <div className="p-4">
         <div className="flex items-center justify-between">
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getTypeBadgeClasses(content.type as ContentType)}`}>
-            {getTypeText(content.type as ContentType)}
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getBadgeClasses()}`}>
+            {getTypeName()}
           </span>
-          <span className="text-xs text-gray-500">{formatDate(String(content.createdAt))}</span>
+          <span className="text-xs text-gray-500">{formatDate(content.createdAt)}</span>
         </div>
+        
         <h3 className="mt-2 text-lg font-medium text-gray-900 truncate">{content.title}</h3>
         
-        {/* Thumbnail ou Preview */}
-        <div className="mt-4">
-          {renderThumbnail()}
-        </div>
+        {renderPreview()}
         
-        {/* Ações */}
         <div className="mt-4 flex justify-between">
           <button 
             onClick={() => onView(content)}
@@ -157,7 +133,11 @@ const ContentCard: React.FC<ContentCardProps> = ({
               
               {onDelete && (
                 <button 
-                  onClick={() => onDelete(content.id)}
+                  onClick={() => {
+                    if (window.confirm('Tem certeza que deseja excluir este conteúdo?')) {
+                      onDelete(content.id);
+                    }
+                  }}
                   className="text-red-500 hover:text-red-700 font-medium text-sm"
                 >
                   Excluir

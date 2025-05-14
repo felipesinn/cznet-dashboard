@@ -1,26 +1,20 @@
-// src/types/content.types.ts
-
-// Tipos de conteúdo
 export enum ContentType {
   PHOTO = 'photo',
   VIDEO = 'video',
   TEXT = 'text',
-  TITLE = 'title'
+  TITLE = 'title',
+  TUTORIAL = 'tutorial'
 }
 
-// Setores da empresa
 export type SectorType = 'suporte' | 'tecnico' | 'noc' | 'comercial' | 'adm';
 
-// Interface para criador/editor
 export interface ContentCreator {
   id: string;
   name: string;
   email: string;
 }
 
-// Interface para item de conteúdo
 export interface ContentItem {
-  mediaItems: any;
   id: string;
   title: string;
   description?: string;
@@ -28,6 +22,7 @@ export interface ContentItem {
   sector: SectorType;
   filePath?: string;
   textContent?: string;
+  mediaItems?: any[];
   createdBy: string;
   updatedBy?: string;
   createdAt: string;
@@ -35,37 +30,3 @@ export interface ContentItem {
   creator: ContentCreator;
   updater?: ContentCreator;
 }
-
-// Interface para criar novo conteúdo
-export interface CreateContentData {
-  title: string;
-  description?: string;
-  type: ContentType;
-  sector: SectorType;
-  file?: File;
-  textContent?: string;
-}
-
-// Interface para atualizar conteúdo existente
-export interface UpdateContentData {
-  title?: string;
-  description?: string;
-  sector?: SectorType;
-  file?: File;
-  textContent?: string;
-}
-
-interface TutorialStep {
-  id: string;
-  order: number;
-  title: string;
-  description: string; // Pode conter HTML formatado
-  image?: string;
-}
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-interface Tutorial extends ContentItem {
-  type: 'tutorial';
-  steps: TutorialStep[];
-}
-export type UserSector = 'suporte' | 'tecnico' | 'noc' | 'comercial' | 'adm';

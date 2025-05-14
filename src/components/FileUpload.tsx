@@ -1,4 +1,3 @@
-// src/components/FileUpload.tsx
 import React, { useState, useRef } from 'react';
 import { X, Upload, Image, FileText, File } from 'lucide-react';
 

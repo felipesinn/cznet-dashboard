@@ -1,8 +1,6 @@
-// src/components/ContentModal.tsx
 import React from 'react';
-import { type ContentItem, ContentType } from '../types/content.types';
-import { contentService } from '../services/content.service';
 import { X } from 'lucide-react';
+import { type ContentItem, ContentType } from '../types/content.types';
 
 interface ContentModalProps {
   content: ContentItem;
@@ -24,14 +22,13 @@ const ContentModal: React.FC<ContentModalProps> = ({ content, onClose }) => {
 
   // Função para renderizar o conteúdo baseado no tipo
   const renderContent = () => {
-    switch (content.type as ContentType) {
+    switch (content.type) {
       case ContentType.PHOTO:
         if (content.filePath) {
-          const imageUrl = contentService.getFileUrl(content.filePath);
           return (
             <div className="mt-4">
               <img 
-                src={imageUrl} 
+                src={`/api/uploads/${content.filePath}`}
                 alt={content.title} 
                 className="max-w-full rounded-md max-h-96 mx-auto"
                 onError={(e) => {
@@ -48,11 +45,10 @@ const ContentModal: React.FC<ContentModalProps> = ({ content, onClose }) => {
         
       case ContentType.VIDEO:
         if (content.filePath) {
-          const videoUrl = contentService.getFileUrl(content.filePath);
           return (
             <div className="mt-4">
               <video 
-                src={videoUrl} 
+                src={`/api/uploads/${content.filePath}`}
                 controls 
                 className="max-w-full rounded-md max-h-96 mx-auto"
               >
@@ -81,13 +77,12 @@ const ContentModal: React.FC<ContentModalProps> = ({ content, onClose }) => {
 
   // Obter badge do tipo
   const getTypeBadge = () => {
-    const type = content.type as ContentType;
-    
-    const classes = {
-      [ContentType.PHOTO]: 'bg-purple-100 text-purple-800',
-      [ContentType.VIDEO]: 'bg-green-100 text-green-800',
-      [ContentType.TEXT]: 'bg-blue-100 text-blue-800',
-      [ContentType.TITLE]: 'bg-yellow-100 text-yellow-800',
+    const classes: Record<ContentType, string> = {
+        [ContentType.PHOTO]: 'bg-purple-100 text-purple-800',
+        [ContentType.VIDEO]: 'bg-green-100 text-green-800',
+        [ContentType.TEXT]: 'bg-blue-100 text-blue-800',
+        [ContentType.TITLE]: 'bg-yellow-100 text-yellow-800',
+        [ContentType.TUTORIAL]: ''
     };
     
     const labels = {
@@ -95,11 +90,12 @@ const ContentModal: React.FC<ContentModalProps> = ({ content, onClose }) => {
       [ContentType.VIDEO]: 'Vídeo',
       [ContentType.TEXT]: 'Texto',
       [ContentType.TITLE]: 'Título',
+      [ContentType.TUTORIAL]: 'Tutorial',
     };
     
     return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${classes[type]}`}>
-        {labels[type]}
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${classes[content.type]}`}>
+        {labels[content.type]}
       </span>
     );
   };
@@ -146,7 +142,7 @@ const ContentModal: React.FC<ContentModalProps> = ({ content, onClose }) => {
               </div>
               <div>
                 <p className="text-gray-500">Criado por</p>
-                <p className="font-medium">{content.creator?.name || 'Desconhecido'}</p>
+                <p className="font-medium">{content.creator?.name || 'Usuário'}</p>
               </div>
               {content.updatedBy && content.updater && (
                 <>

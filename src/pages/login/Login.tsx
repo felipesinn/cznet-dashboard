@@ -1,14 +1,11 @@
 import React, { useState } from 'react'; 
 import { useNavigate } from 'react-router-dom'; 
 import { useAuth } from '../../contexts/AuthContext'; 
-// import Logo from "../../assets/img/CZNet-Branco-Vermelho-Copia.png";
 import axios, { AxiosError } from 'axios';
 
-// Interface para o erro da API
 interface ApiError {
   message: string;
   status?: number;
-  [key: string]: unknown;
 }
 
 export default function Login() {   
@@ -23,8 +20,6 @@ export default function Login() {
     setError('');          
     
     try {       
-      console.log("Tentando fazer login com:", { email });
-      
       // Usar o login do AuthContext
       await login({ email, password });              
       
@@ -33,45 +28,30 @@ export default function Login() {
       if (userStr) {         
         const user = JSON.parse(userStr);
         
-        // MODIFICAÇÃO: Definir um setor padrão se estiver indefinido
+        // Definir um setor padrão se estiver indefinido
         if (!user.sector) {
           user.sector = 'suporte';
           localStorage.setItem('user', JSON.stringify(user));
         }
         
-        console.log("Login bem-sucedido, redirecionando usuário:", { 
-          role: user.role, 
-          sector: user.sector 
-        });
-        
         // Verificar a role do usuário e redirecionar adequadamente
         if (user.role === 'super_admin') {  
-          console.log("Redirecionando super_admin para:", '/admin/dashboard');
           navigate('/admin/dashboard');
         } else if (user.role === 'admin') {
-          console.log("Redirecionando admin para:", `/${user.sector}`);
           navigate(`/${user.sector}`);
         } else {
-          console.log("Redirecionando usuário comum para:", `/${user.sector}`);
           navigate(`/${user.sector}`);
         }       
       } else {
-        console.error("Usuário logado, mas não encontrado no localStorage");
         setError('Erro ao obter informações do usuário');
       }
     } catch (error) {  
-      console.error("Erro durante o login:", error);
-     
-      // Tratar o erro com tipagem adequada
       let errorMessage = 'Erro ao fazer login.';
       
-      // Verificar se é um erro do Axios
       if (axios.isAxiosError(error)) {
         const axiosError = error as AxiosError<ApiError>;
-        // Tentar extrair a mensagem de erro da resposta da API
         errorMessage = axiosError.response?.data?.message || errorMessage;
       } else if (error instanceof Error) {
-        // Se for um erro genérico do JavaScript
         errorMessage = error.message;
       }
       
@@ -90,7 +70,7 @@ export default function Login() {
       name: "Super Admin",
       email: "superadmin@example.com",
       role: "super_admin",
-      sector: "suporte", // Definir um setor padrão
+      sector: "suporte",
       permissions: ["all"]
     };
     
@@ -98,13 +78,14 @@ export default function Login() {
     localStorage.setItem('token', mockToken);
     localStorage.setItem('user', JSON.stringify(superAdminUser));
     
-    console.log("Usuário super_admin criado localmente, redirecionando...");
     navigate('/admin/dashboard');
   };
 
   return (     
     <div className="flex flex-col items-center justify-center h-screen bg-gray-100">       
-      {/* <img src={Logo} alt="CZNet Logo" className="w-36 shadow-md m-6 py-2" /> */}
+      <div className="w-36 h-36 flex items-center justify-center bg-red-600 text-white text-4xl font-bold rounded-full shadow-md m-6">
+        CZ
+      </div>
       
       <form         
         onSubmit={handleSubmit}         

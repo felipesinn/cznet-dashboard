@@ -1,135 +1,53 @@
-// src/pages/admin/UserManagement.tsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  LogOut, Plus, Edit, Trash2, Search, X, Check, ArrowLeft 
+  Plus, 
+  Edit, 
+  Trash2, 
+  Search, 
+  ArrowLeft,
+  X,
+  Check
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import ResponsiveLayout from '../../components/layout/ResponsiveLayout';
+import api from '../../services/api';
 import type { User, UserRole, UserSector } from '../../types/auth.types';
-
-interface UserWithId extends User {
-  id: string;
-}
-
-// Simular o serviço de usuários (deve ser substituído por chamadas reais à API)
-const userService = {
-  async getUsers(): Promise<UserWithId[]> {
-    // Simulação - na implementação real, buscaria da API
-    return [
-      {
-        id: '1',
-        name: 'Super Admin',
-        email: 'super@example.com',
-        role: 'super_admin' as UserRole,
-        sector: 'suporte' as UserSector,
-        isActive: true,
-        createdAt: '2023-01-01'
-      },
-      {
-        id: '2',
-        name: 'Admin Suporte',
-        email: 'admin.suporte@example.com',
-        role: 'admin' as UserRole,
-        sector: 'suporte' as UserSector,
-        isActive: true,
-        createdAt: '2023-01-02'
-      },
-      {
-        id: '3',
-        name: 'Admin Técnico',
-        email: 'admin.tecnico@example.com',
-        role: 'admin' as UserRole,
-        sector: 'tecnico' as UserSector,
-        isActive: true,
-        createdAt: '2023-01-03'
-      },
-      {
-        id: '4',
-        name: 'Usuário Comum',
-        email: 'usuario@example.com',
-        role: 'user' as UserRole,
-        sector: 'suporte' as UserSector,
-        isActive: true,
-        createdAt: '2023-01-04'
-      },
-      {
-        id: '5',
-        name: 'Usuário Inativo',
-        email: 'inativo@example.com',
-        role: 'user' as UserRole,
-        sector: 'comercial' as UserSector,
-        isActive: false,
-        createdAt: '2023-01-05'
-      }
-    ];
-  },
-  
-  async createUser(userData: Partial<User>): Promise<UserWithId> {
-    // Simulação - na implementação real, enviaria para API
-    return {
-      id: Math.floor(Math.random() * 1000).toString(),
-      name: userData.name || '',
-      email: userData.email || '',
-      role: userData.role || 'user' as UserRole,
-      sector: userData.sector || 'suporte' as UserSector,
-      isActive: userData.isActive !== false,
-      createdAt: new Date().toISOString()
-    };
-  },
-  
-  async updateUser(id: string, userData: Partial<User>): Promise<UserWithId> {
-    // Simulação - na implementação real, enviaria para API
-    return {
-      id,
-      name: userData.name || '',
-      email: userData.email || '',
-      role: userData.role || 'user' as UserRole,
-      sector: userData.sector || 'suporte' as UserSector,
-      isActive: userData.isActive !== false,
-      createdAt: '2023-01-01'
-    };
-  },
-  
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async deleteUser(_id: string): Promise<{ success: boolean }> {
-    // Simulação - na implementação real, enviaria para API
-    return { success: true };
-  }
-};
 
 const UserManagement: React.FC = () => {
   const navigate = useNavigate();
-  const { authState, logout } = useAuth();
+  const { authState } = useAuth();
   const { user } = authState;
   
   // Verificar se é super_admin
   const isSuperAdmin = user?.role === 'super_admin';
   
   // Estados
-  const [users, setUsers] = useState<UserWithId[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [editingUser, setEditingUser] = useState<UserWithId | null>(null);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   
   // Formulário
-  const [formData, setFormData] = useState<Partial<User>>({
+  const [formData, setFormData] = useState({
     name: '',
     email: '',
-    role: 'user',
-    sector: 'suporte',
-    isActive: true
+    role: 'user' as UserRole,
+    sector: 'suporte' as UserSector,
+    isActive: true,
+    password: '',
+    confirmPassword: ''
   });
-  const [password, setPassword] = useState('');
   
   // Carregar usuários
   useEffect(() => {
     const loadUsers = async () => {
       setLoading(true);
       try {
-        const data = await userService.getUsers();
-        setUsers(data);
+        const response = await api.get('/users');
+        setUsers(response.data);
       } catch (err) {
         console.error('Erro ao carregar usuários:', err);
         setError('Não foi possível carregar a lista de usuários.');
@@ -143,10 +61,10 @@ const UserManagement: React.FC = () => {
   
   // Redirecionar para dashboard se não for super_admin
   useEffect(() => {
-    if (!loading && user && !isSuperAdmin) {
+    if (!loading && !isSuperAdmin) {
       navigate('/admin/dashboard');
     }
-  }, [loading, user, isSuperAdmin, navigate]);
+  }, [loading, isSuperAdmin, navigate]);
   
   // Funções de manipulação de usuários
   const handleAddUser = () => {
@@ -156,29 +74,31 @@ const UserManagement: React.FC = () => {
       email: '',
       role: 'user',
       sector: 'suporte',
-      isActive: true
+      isActive: true,
+      password: '',
+      confirmPassword: ''
     });
-    setPassword('');
     setShowForm(true);
   };
   
-  const handleEditUser = (user: UserWithId) => {
+  const handleEditUser = (user: User) => {
     setEditingUser(user);
     setFormData({
       name: user.name,
       email: user.email,
       role: user.role,
       sector: user.sector,
-      isActive: user.isActive
+      isActive: user.isActive !== false,
+      password: '',
+      confirmPassword: ''
     });
-    setPassword('');
     setShowForm(true);
   };
   
   const handleDeleteUser = async (id: string) => {
     if (window.confirm('Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita.')) {
       try {
-        await userService.deleteUser(id);
+        await api.delete(`/users/${id}`);
         setUsers(prev => prev.filter(user => user.id !== id));
       } catch (err) {
         console.error('Erro ao excluir usuário:', err);
@@ -190,23 +110,30 @@ const UserManagement: React.FC = () => {
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validação
+    if (formData.password !== formData.confirmPassword) {
+      alert('As senhas não coincidem');
+      return;
+    }
+    
     try {
+      const userData = {
+        name: formData.name,
+        email: formData.email,
+        role: formData.role,
+        sector: formData.sector,
+        isActive: formData.isActive,
+        password: formData.password || undefined
+      };
+      
       if (editingUser) {
         // Atualizar usuário existente
-        const updatedUser = await userService.updateUser(editingUser.id, formData);
-        setUsers(prev => prev.map(user => user.id === updatedUser.id ? updatedUser : user));
+        const response = await api.put(`/users/${editingUser.id}`, userData);
+        setUsers(prev => prev.map(user => user.id === editingUser.id ? response.data : user));
       } else {
         // Criar novo usuário
-        if (!password) {
-          alert('A senha é obrigatória para novos usuários.');
-          return;
-        }
-        
-        const newUser = await userService.createUser({
-          ...formData
-        });
-        
-        setUsers(prev => [...prev, newUser]);
+        const response = await api.post('/users', userData);
+        setUsers(prev => [...prev, response.data]);
       }
       
       setShowForm(false);
@@ -220,7 +147,6 @@ const UserManagement: React.FC = () => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     
-    // Tratar checkbox
     if (type === 'checkbox') {
       const checked = (e.target as HTMLInputElement).checked;
       setFormData(prev => ({ ...prev, [name]: checked }));
@@ -235,17 +161,6 @@ const UserManagement: React.FC = () => {
     user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.sector.toLowerCase().includes(searchTerm.toLowerCase())
   );
-  
-  // Função para voltar ao dashboard
-  const goToDashboard = () => {
-    navigate('/admin/dashboard');
-  };
-  
-  // Função para logout
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
   
   // Funções de formatação
   const formatRole = (role: string): string => {
@@ -284,195 +199,160 @@ const UserManagement: React.FC = () => {
   };
   
   return (
-    <div className="h-screen flex flex-col bg-gray-100">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center">
-              <div className="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center text-white font-bold mr-2">
-                CZ
-              </div>
-              <h1 className="text-xl font-bold text-gray-900">Gerenciamento de Usuários</h1>
+    <ResponsiveLayout title="Gerenciamento de Usuários">
+      <div className="p-6">
+        {/* Botões de ação */}
+        <div className="flex justify-between mb-6">
+          <button
+            onClick={() => navigate('/admin/dashboard')}
+            className="flex items-center px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+          >
+            <ArrowLeft size={18} className="mr-1" />
+            Voltar para Dashboard
+          </button>
+          
+          <button
+            onClick={handleAddUser}
+            className="flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+          >
+            <Plus size={18} className="mr-1" />
+            Adicionar Usuário
+          </button>
+        </div>
+        
+        {/* Mensagem de erro */}
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+            {error}
+          </div>
+        )}
+        
+        {/* Barra de pesquisa */}
+        <div className="mb-6">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search size={18} className="text-gray-400" />
             </div>
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-700 font-medium">
-                  {user?.name?.charAt(0) || 'A'}
-                </div>
-                <span className="font-medium text-gray-700">{user?.name || 'Admin'}</span>
-              </div>
-            </div>
+            <input
+              type="text"
+              placeholder="Buscar usuários..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+            />
           </div>
         </div>
-      </header>
-
-      {/* Main Content */}
-      <div className="flex-1 overflow-auto p-6">
-        <div className="max-w-7xl mx-auto">
-          {/* Botões de ação */}
-          <div className="flex justify-between mb-6">
-            <button
-              onClick={goToDashboard}
-              className="flex items-center px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
-            >
-              <ArrowLeft size={18} className="mr-1" />
-              Voltar para Dashboard
-            </button>
-            
-            <div className="flex space-x-2">
-              <button
-                onClick={handleAddUser}
-                className="flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-              >
-                <Plus size={18} className="mr-1" />
-                Adicionar Usuário
-              </button>
-              
-              <button
-                onClick={handleLogout}
-                className="flex items-center px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
-              >
-                <LogOut size={18} className="mr-1" />
-                Sair
-              </button>
+        
+        {/* Lista de usuários */}
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+          {loading ? (
+            <div className="flex justify-center items-center py-12">
+              <svg className="animate-spin h-8 w-8 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
             </div>
-          </div>
-          
-          {/* Mensagem de erro */}
-          {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-              {error}
-            </div>
-          )}
-          
-          {/* Barra de pesquisa */}
-          <div className="mb-6">
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search size={18} className="text-gray-400" />
-              </div>
-              <input
-                type="text"
-                placeholder="Buscar usuários..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-              />
-            </div>
-          </div>
-          
-          {/* Lista de usuários */}
-          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-            {loading ? (
-              <div className="flex justify-center items-center py-12">
-                <svg className="animate-spin h-8 w-8 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Nome
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Email
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Função
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Setor
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Criado em
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Ações
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredUsers.length > 0 ? (
-                      filteredUsers.map((user) => (
-                        <tr key={user.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-700 font-medium mr-3">
-                                {user.name.charAt(0)}
-                              </div>
-                              <div className="text-sm font-medium text-gray-900">{user.name}</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Nome
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Email
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Função
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Setor
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Criado em
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Ações
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredUsers.length > 0 ? (
+                    filteredUsers.map((user) => (
+                      <tr key={user.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-700 font-medium mr-3">
+                              {user.name.charAt(0)}
                             </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {user.email}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                              user.role === 'super_admin' 
-                                ? 'bg-purple-100 text-purple-800' 
-                                : user.role === 'admin' 
-                                  ? 'bg-blue-100 text-blue-800' 
-                                  : 'bg-green-100 text-green-800'
-                            }`}>
-                              {formatRole(user.role)}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {formatSector(user.sector)}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                              user.isActive 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-red-100 text-red-800'
-                            }`}>
-                              {user.isActive ? 'Ativo' : 'Inativo'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {formatDate(user.createdAt || '')}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <div className="flex justify-end space-x-2">
+                            <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {user.email}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            user.role === 'super_admin' 
+                              ? 'bg-purple-100 text-purple-800' 
+                              : user.role === 'admin' 
+                                ? 'bg-blue-100 text-blue-800' 
+                                : 'bg-green-100 text-green-800'
+                          }`}>
+                            {formatRole(user.role)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {formatSector(user.sector)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            user.isActive 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {user.isActive ? 'Ativo' : 'Inativo'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {user.createdAt ? formatDate(user.createdAt) : '-'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <div className="flex justify-end space-x-2">
+                            <button
+                              onClick={() => handleEditUser(user)}
+                              className="text-indigo-600 hover:text-indigo-900"
+                            >
+                              <Edit size={18} />
+                            </button>
+                            {/* Não permitir excluir o próprio super_admin */}
+                            {user.role !== 'super_admin' && user.id !== authState.user?.id && (
                               <button
-                                onClick={() => handleEditUser(user)}
-                                className="text-indigo-600 hover:text-indigo-900"
+                                onClick={() => handleDeleteUser(user.id)}
+                                className="text-red-600 hover:text-red-900"
                               >
-                                <Edit size={18} />
+                                <Trash2 size={18} />
                               </button>
-                              {/* Não permitir excluir o próprio super_admin */}
-                              {user.role !== 'super_admin' && (
-                                <button
-                                  onClick={() => handleDeleteUser(user.id)}
-                                  className="text-red-600 hover:text-red-900"
-                                >
-                                  <Trash2 size={18} />
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">
-                          Nenhum usuário encontrado.
+                            )}
+                          </div>
                         </td>
                       </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">
+                        Nenhum usuário encontrado.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
 
@@ -503,7 +383,7 @@ const UserManagement: React.FC = () => {
                     type="text"
                     id="name"
                     name="name"
-                    value={formData.name || ''}
+                    value={formData.name}
                     onChange={handleInputChange}
                     className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
                     required
@@ -519,29 +399,49 @@ const UserManagement: React.FC = () => {
                     type="email"
                     id="email"
                     name="email"
-                    value={formData.email || ''}
+                    value={formData.email}
                     onChange={handleInputChange}
                     className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
                     required
                   />
                 </div>
                 
-                {/* Senha (apenas para novos usuários) */}
-                {!editingUser && (
-                  <div className="mb-4">
-                    <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                      Senha *
-                    </label>
-                    <input
-                      type="password"
-                      id="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                      required
-                    />
-                  </div>
-                )}
+                {/* Senha */}
+                <div className="mb-4">
+                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                    Senha {!editingUser && '*'}
+                  </label>
+                  <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    required={!editingUser}
+                  />
+                  {editingUser && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Deixe em branco para manter a senha atual.
+                    </p>
+                  )}
+                </div>
+                
+                {/* Confirmar senha */}
+                <div className="mb-4">
+                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                    Confirmar Senha {!editingUser && '*'}
+                  </label>
+                  <input
+                    type="password"
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    value={formData.confirmPassword}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    required={!editingUser}
+                  />
+                </div>
                 
                 {/* Função */}
                 <div className="mb-4">
@@ -551,7 +451,7 @@ const UserManagement: React.FC = () => {
                   <select
                     id="role"
                     name="role"
-                    value={formData.role || 'user'}
+                    value={formData.role}
                     onChange={handleInputChange}
                     className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
                     required
@@ -570,7 +470,7 @@ const UserManagement: React.FC = () => {
                   <select
                     id="sector"
                     name="sector"
-                    value={formData.sector || 'suporte'}
+                    value={formData.sector}
                     onChange={handleInputChange}
                     className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
                     required
@@ -589,7 +489,7 @@ const UserManagement: React.FC = () => {
                     <input
                       type="checkbox"
                       name="isActive"
-                      checked={formData.isActive !== false}
+                      checked={formData.isActive}
                       onChange={handleInputChange}
                       className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
                     />
@@ -619,7 +519,7 @@ const UserManagement: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
+    </ResponsiveLayout>
   );
 };
 

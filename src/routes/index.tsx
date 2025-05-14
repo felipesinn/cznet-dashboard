@@ -1,4 +1,3 @@
-// src/routes/AppRoutes.tsx
 import React from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import PrivateRoute from "./PrivateRoute";
@@ -8,10 +7,7 @@ import SectorView from "../pages/sectors/SectorView";
 import Dashboard from "../pages/admin/Dashboard";
 import UserManagement from "../pages/admin/UserManagement";
 import UserRegistration from "../pages/admin/UserRegistration";
-import TutorialEditor from "../components/tutorials/TutorialEditor";
-import ResponsiveLayout from "../components/layout/ResponsiveLayout";
 import { useAuth } from "../contexts/AuthContext";
-import type { SectorType } from "../types/content.types";
 
 const AppRoutes: React.FC = () => {
   const { authState } = useAuth();
@@ -33,8 +29,12 @@ const AppRoutes: React.FC = () => {
       {/* Rotas públicas */}
       <Route path="/login" element={<Login />} />
 
-      {/* Redirecionar raiz para login */}
-      <Route path="/" element={<Navigate to="/login" />} />
+      {/* Redirecionar raiz para login ou setor do usuário */}
+      <Route path="/" element={
+        authState.isAuthenticated ? 
+          <Navigate to={`/${authState.user?.sector || 'suporte'}`} /> : 
+          <Navigate to="/login" />
+      } />
 
       {/* Rotas de setores */}
       <Route 
@@ -107,54 +107,7 @@ const AppRoutes: React.FC = () => {
         path="/admin/users/register"
         element={
           <PrivateRoute allowedRoles={["super_admin", "admin"]}>
-            <ResponsiveLayout title="Registrar Novo Usuário">
-              <UserRegistration />
-            </ResponsiveLayout>
-          </PrivateRoute>
-        }
-      />
-      
-      {/* Criação/Edição de Tutoriais - super_admin e admin */}
-      <Route
-        path="/admin/tutorials/create"
-        element={
-          <PrivateRoute allowedRoles={["super_admin", "admin"]}>
-            <ResponsiveLayout title="Criar Tutorial">
-              <div className="p-4">
-                <TutorialEditor
-                  userSector={authState.user?.sector as SectorType || 'suporte' as SectorType}
-                  isSuperAdmin={authState.user?.role === 'super_admin'}
-                  onSubmit={async () => {
-                    // Implementar função real para enviar à API
-                    alert('Salvando tutorial...');
-                    return Promise.resolve();
-                  }}
-                  onCancel={() => window.history.back()}
-                />
-              </div>
-            </ResponsiveLayout>
-          </PrivateRoute>
-        }
-      />
-      
-      <Route
-        path="/admin/tutorials/edit/:id"
-        element={
-          <PrivateRoute allowedRoles={["super_admin", "admin"]}>
-            <ResponsiveLayout title="Editar Tutorial">
-              <div className="p-4">
-                <TutorialEditor
-                  userSector={authState.user?.sector as SectorType || 'suporte' as SectorType}
-                  isSuperAdmin={authState.user?.role === 'super_admin'}
-                  onSubmit={async () => {
-                    // Implementar função real para enviar à API
-                    alert('Atualizando tutorial...');
-                    return Promise.resolve();
-                  }}
-                  onCancel={() => window.history.back()}
-                />
-              </div>
-            </ResponsiveLayout>
+            <UserRegistration />
           </PrivateRoute>
         }
       />

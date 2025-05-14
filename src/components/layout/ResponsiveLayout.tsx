@@ -1,23 +1,19 @@
-// src/components/layout/ResponsiveLayout.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, type JSX } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Headphones, 
   Upload, 
   Bell, 
-  Menu as MenuIcon, 
-  Search, 
+  Menu, 
   X, 
   LogOut, 
-  ChevronDown, 
-  User,
-  Home,
+  ChevronDown,
+  Search,
   Users,
-  Settings,
-  Database
+  Settings
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import type { UserSector } from '../../types/content.types';
+import type { UserSector } from '../../types/auth.types';
 
 interface ResponsiveLayoutProps {
   children: React.ReactNode;
@@ -38,21 +34,18 @@ const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   
-  // Verificar permissões
   const isSuperAdmin = user?.role === 'super_admin';
   const isAdmin = isSuperAdmin || user?.role === 'admin';
   
-  // Ícones para cada setor
-  const sectorIcons = {
+  const sectorIcons: Record<string, JSX.Element> = {
     suporte: <Headphones size={20} />,
     tecnico: <Upload size={20} />,
     noc: <Bell size={20} />,
-    comercial: <MenuIcon size={20} />,
+    comercial: <Menu size={20} />,
     adm: <Search size={20} />
   };
   
-  // Nomes formatados para cada setor
-  const sectorNames = {
+  const sectorNames: Record<string, string> = {
     suporte: 'Suporte',
     tecnico: 'Técnico',
     noc: 'NOC',
@@ -60,12 +53,9 @@ const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({
     adm: 'ADM'
   };
   
-  // Monitorar redimensionamento da janela
   useEffect(() => {
     const handleResize = () => {
       setWindowWidth(window.innerWidth);
-      
-      // Fechar sidebar automaticamente em dispositivos móveis ao redimensionar
       if (window.innerWidth >= 768) {
         setSidebarOpen(false);
       }
@@ -75,9 +65,7 @@ const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
   
-  // Função para navegar para um setor
   const navigateToSector = (sector: UserSector) => {
-    // Se não for superadmin, só pode acessar seu próprio setor
     if (!isSuperAdmin && sector !== user?.sector) {
       return;
     }
@@ -86,31 +74,21 @@ const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({
     setSidebarOpen(false);
   };
   
-  // Função para navegar para o dashboard
   const navigateToDashboard = () => {
     navigate('/admin/dashboard');
     setSidebarOpen(false);
   };
   
-  // Função para gerenciar usuários (apenas para super_admin)
   const navigateToUserManagement = () => {
     navigate('/admin/users');
     setSidebarOpen(false);
   };
 
-  // Função para registrar novos usuários
-  const navigateToUserRegistration = () => {
-    navigate('/admin/users/register');
-    setSidebarOpen(false);
-  };
-  
-  // Função para logout
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
   
-  // Fechar o menu ao clicar fora
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
@@ -118,7 +96,6 @@ const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({
         setProfileDropdownOpen(false);
       }
       
-      // Fechar o sidebar em dispositivos móveis ao clicar fora
       if (windowWidth < 768 && sidebarOpen && !target.closest('#mobile-sidebar') && !target.closest('#mobile-menu-button')) {
         setSidebarOpen(false);
       }
@@ -130,20 +107,18 @@ const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({
   
   return (
     <div className="flex flex-col min-h-screen bg-gray-100">
-      {/* Header para todos os dispositivos */}
+      {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200 z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
-            {/* Logo e título */}
             <div className="flex items-center">
-              {/* Botão do menu (apenas mobile) */}
               {windowWidth < 768 && (
                 <button 
                   id="mobile-menu-button"
                   onClick={() => setSidebarOpen(!sidebarOpen)}
                   className="p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 mr-2"
                 >
-                  {sidebarOpen ? <X size={20} /> : <MenuIcon size={20} />}
+                  {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
                 </button>
               )}
               
@@ -151,22 +126,19 @@ const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({
                 CZ
               </div>
               <h1 className="text-xl font-bold text-gray-900 hidden sm:block">
-                {title || `CZNet ${sectorNames[currentSector as keyof typeof sectorNames] || 'Portal'}`}
+                {title || `CZNet ${sectorNames[currentSector] || 'Portal'}`}
               </h1>
               <h1 className="text-lg font-bold text-gray-900 sm:hidden">
-                {title ? (title.length > 15 ? title.substring(0, 15) + '...' : title) : `CZ ${sectorNames[currentSector as keyof typeof sectorNames]?.substring(0, 3) || 'Portal'}`}
+                {title ? (title.length > 15 ? title.substring(0, 15) + '...' : title) : `CZ ${sectorNames[currentSector]?.substring(0, 3) || 'Portal'}`}
               </h1>
             </div>
             
-            {/* Área do usuário */}
             <div className="flex items-center space-x-4">
-              {/* Ícone de notificações */}
               <button className="p-2 rounded-full hover:bg-gray-200 relative">
                 <Bell size={20} />
                 <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
               </button>
               
-              {/* Avatar e nome do usuário */}
               <div className="relative" id="profile-dropdown">
                 <button 
                   onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
@@ -179,7 +151,6 @@ const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({
                   <ChevronDown size={16} className="text-gray-500 hidden md:block" />
                 </button>
                 
-                {/* Dropdown de perfil */}
                 {profileDropdownOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
                     <div className="px-4 py-2 border-b border-gray-100">
@@ -194,16 +165,6 @@ const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({
                       >
                         <Settings size={16} className="mr-2 text-gray-500" />
                         Dashboard Admin
-                      </button>
-                    )}
-                    
-                    {(isSuperAdmin || isAdmin) && (
-                      <button
-                        onClick={navigateToUserRegistration}
-                        className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      >
-                        <User size={16} className="mr-2 text-gray-500" />
-                        Registrar Usuário
                       </button>
                     )}
                     
@@ -249,7 +210,6 @@ const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({
             </div>
 
             <nav className="mt-4 px-2 space-y-1">
-              {/* Dashboard Admin (apenas para admin e super_admin) */}
               {isAdmin && (
                 <button 
                   onClick={navigateToDashboard}
@@ -260,7 +220,6 @@ const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({
                 </button>
               )}
               
-              {/* Gerenciamento de Usuários (apenas para super_admin) */}
               {isSuperAdmin && (
                 <button 
                   onClick={navigateToUserManagement}
@@ -270,29 +229,7 @@ const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({
                   <span>Gerenciar Usuários</span>
                 </button>
               )}
-
-              {/* Registro de Usuários (apenas para admins) */}
-              {(isSuperAdmin || isAdmin) && (
-                <button 
-                  onClick={navigateToUserRegistration}
-                  className="flex items-center w-full justify-start space-x-3 p-3 rounded-lg hover:bg-gray-200 transition-colors"
-                >
-                  <User size={20} />
-                  <span>Registrar Usuário</span>
-                </button>
-              )}
-
-              {/* Gerenciar Conteúdo (apenas para admins) */}
-              {isAdmin && (
-                <button 
-                  className="flex items-center w-full justify-start space-x-3 p-3 rounded-lg hover:bg-gray-200 transition-colors"
-                >
-                  <Database size={20} />
-                  <span>Gerenciar Conteúdo</span>
-                </button>
-              )}
               
-              {/* Setores - mostrar todos para super admin, apenas o próprio para outros */}
               <div className="mt-4 pt-4 border-t border-gray-200">
                 <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
                   Setores
@@ -300,7 +237,6 @@ const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({
               </div>
               
               {isSuperAdmin ? (
-                // Todos os setores para super admin
                 <>
                   <button 
                     onClick={() => navigateToSector('suporte')}
@@ -338,7 +274,7 @@ const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({
                       currentSector === 'comercial' ? 'bg-red-100 text-red-600' : 'hover:bg-gray-200 transition-colors'
                     }`}
                   >
-                    <MenuIcon size={20} />
+                    <Menu size={20} />
                     <span>Comercial</span>
                   </button>
                   
@@ -353,16 +289,14 @@ const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({
                   </button>
                 </>
               ) : (
-                // Apenas o próprio setor para outros usuários
                 <button 
                   className="flex items-center w-full justify-start space-x-3 p-3 rounded-lg bg-red-100 text-red-600"
                 >
-                  {sectorIcons[user?.sector as keyof typeof sectorIcons] || <Search size={20} />}
-                  <span>{user?.sector && user.sector in sectorNames ? sectorNames[user.sector as keyof typeof sectorNames] : user?.sector ?? 'Setor Desconhecido'}</span>
+                  {sectorIcons[user?.sector as string] || <Search size={20} />}
+                  <span>{sectorNames[user?.sector as string] || user?.sector || 'Setor'}</span>
                 </button>
               )}
               
-              {/* Botão de logout */}
               <button 
                 onClick={handleLogout}
                 className="flex items-center w-full justify-start space-x-3 p-3 rounded-lg hover:bg-gray-200 transition-colors text-red-600 mt-8"
@@ -412,19 +346,6 @@ const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({
                 </div>
                 
                 <nav className="flex-1 px-2 py-4 overflow-y-auto">
-                  {/* Home */}
-                  <button 
-                    onClick={() => {
-                      navigate('/');
-                      setSidebarOpen(false);
-                    }}
-                    className="flex items-center w-full justify-start space-x-3 p-3 rounded-lg hover:bg-gray-200 transition-colors mb-2"
-                  >
-                    <Home size={20} />
-                    <span>Página Inicial</span>
-                  </button>
-                  
-                  {/* Dashboard Admin (apenas para admin e super_admin) */}
                   {isAdmin && (
                     <button 
                       onClick={navigateToDashboard}
@@ -435,7 +356,6 @@ const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({
                     </button>
                   )}
                   
-                  {/* Gerenciamento de Usuários (apenas para super_admin) */}
                   {isSuperAdmin && (
                     <button 
                       onClick={navigateToUserManagement}
@@ -445,29 +365,7 @@ const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({
                       <span>Gerenciar Usuários</span>
                     </button>
                   )}
-
-                  {/* Registro de Usuários (apenas para admins) */}
-                  {(isSuperAdmin || isAdmin) && (
-                    <button 
-                      onClick={navigateToUserRegistration}
-                      className="flex items-center w-full justify-start space-x-3 p-3 rounded-lg hover:bg-gray-200 transition-colors mb-2"
-                    >
-                      <User size={20} />
-                      <span>Registrar Usuário</span>
-                    </button>
-                  )}
-
-                  {/* Gerenciar Conteúdo (apenas para admins) */}
-                  {isAdmin && (
-                    <button 
-                      className="flex items-center w-full justify-start space-x-3 p-3 rounded-lg hover:bg-gray-200 transition-colors mb-2"
-                    >
-                      <Database size={20} />
-                      <span>Gerenciar Conteúdo</span>
-                    </button>
-                  )}
                   
-                  {/* Setores - mostrar todos para super admin, apenas o próprio para outros */}
                   <div className="mt-4 mb-2">
                     <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                       Setores
@@ -475,7 +373,6 @@ const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({
                   </div>
                   
                   {isSuperAdmin ? (
-                    // Todos os setores para super admin
                     <>
                       <button 
                         onClick={() => navigateToSector('suporte')}
@@ -513,7 +410,7 @@ const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({
                           currentSector === 'comercial' ? 'bg-red-100 text-red-600' : 'hover:bg-gray-200 transition-colors'
                         } mb-1`}
                       >
-                        <MenuIcon size={20} />
+                        <Menu size={20} />
                         <span>Comercial</span>
                       </button>
                       
@@ -528,16 +425,14 @@ const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({
                       </button>
                     </>
                   ) : (
-                    // Apenas o próprio setor para outros usuários
                     <button 
                       className="flex items-center w-full justify-start space-x-3 p-3 rounded-lg bg-red-100 text-red-600 mb-1"
                     >
-                      {sectorIcons[user?.sector as UserSector] || <Search size={20} />}
-                      <span>{sectorNames[user?.sector as UserSector] || user?.sector}</span>
+                      {sectorIcons[user?.sector as string] || <Search size={20} />}
+                      <span>{sectorNames[user?.sector as string] || user?.sector}</span>
                     </button>
                   )}
                   
-                  {/* Botão de logout */}
                   <div className="mt-8">
                     <button 
                       onClick={handleLogout}

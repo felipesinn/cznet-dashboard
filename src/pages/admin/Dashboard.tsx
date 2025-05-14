@@ -1,377 +1,244 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Menu, Upload, FileText, Type, Layers, Headphones, LogOut, Search, Users, Database } from 'lucide-react';
+import { 
+  Users, 
+  Database, 
+  ArrowRight 
+} from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import ResponsiveLayout from '../../components/layout/ResponsiveLayout';
+import api from '../../services/api';
 
-// Interface para tipagem do avatar do usuário
-interface UserWithAvatar {
-  name?: string;
-  role?: string;
-  sector?: string;
-  avatar?: string | null;
-  email: string;
-  [key: string]: unknown;
-}
-
-// Interface para props do componente (mesmo que estejam vazias)
-type DashboardProps = object
-
-// Setores disponíveis
-enum Sector {
-  SUPORTE = 'suporte',
-  TECNICO = 'tecnico',
-  NOC = 'noc',
-  COMERCIAL = 'comercial',
-  ADM = 'adm'
-}
-
-// Componente com props definidas
-const Dashboard: React.FC<DashboardProps> = (_props) => {
+const Dashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { authState, logout } = useAuth();
-  // Corrigido: use tipagem apropriada para o usuário com avatar
-  const user = authState.user as UserWithAvatar | null;
+  const { authState } = useAuth();
+  const { user } = authState;
   
-  // Verificar se o usuário é super_admin
-  const isSuperAdmin = user?.role === 'super_admin';
-  // Obter o setor atual do usuário (padrão para 'suporte' se não definido)
-  const userSector = user?.sector || 'suporte';
-  
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
-  
-  const navigateToSector = (sector: string) => {
-    // Se não for superadmin, só pode acessar seu próprio setor
-    if (!isSuperAdmin && sector !== userSector) {
-      return;
+  // Estados
+  const [stats, setStats] = useState({
+    users: 0,
+    content: {
+      total: 0,
+      byType: {},
+      bySector: {}
     }
-    navigate(`/${sector}`);
-  };
+  });
+  const [loading, setLoading] = useState(true);
   
+  // Verificar permissões
+  const isSuperAdmin = user?.role === 'super_admin';
+  const isAdmin = isSuperAdmin || user?.role === 'admin';
+  
+  // Carregar estatísticas
+  useEffect(() => {
+    const loadStats = async () => {
+      setLoading(true);
+      
+      try {
+        // Em um sistema real, estas seriam chamadas de API
+        // Para simplificar, estamos mockando os dados
+        
+        // Estatísticas de usuários (apenas para super_admin)
+        let userStats = 0;
+        if (isSuperAdmin) {
+          try {
+            const usersResponse = await api.get('/users');
+            userStats = usersResponse.data.length;
+          } catch (err) {
+            console.error('Erro ao carregar estatísticas de usuários:', err);
+            userStats = 0;
+          }
+        }
+        
+        // Estatísticas de conteúdo
+        const contentStats = {
+          total: 0,
+          byType: {},
+          bySector: {}
+        };
+        
+        try {
+          // Para admin, filtrar pelo setor
+          const url = isSuperAdmin ? '/content' : `/content/sector/${user?.sector}`;
+          const contentResponse = await api.get(url);
+          
+          contentStats.total = contentResponse.data.length;
+          
+          // Agrupar por tipo
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          contentStats.byType = contentResponse.data.reduce((acc: any, content: any) => {
+            acc[content.type] = (acc[content.type] || 0) + 1;
+            return acc;
+          }, {});
+          
+          // Agrupar por setor (apenas para super_admin)
+          if (isSuperAdmin) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            contentStats.bySector = contentResponse.data.reduce((acc: any, content: any) => {
+              acc[content.sector] = (acc[content.sector] || 0) + 1;
+              return acc;
+            }, {});
+          }
+        } catch (err) {
+          console.error('Erro ao carregar estatísticas de conteúdo:', err);
+        }
+        
+        setStats({
+          users: userStats,
+          content: contentStats
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadStats();
+  }, [isSuperAdmin, user?.sector]);
+
+  // Redirecionar se não for admin
+  if (!isAdmin) {
+    navigate(`/${user?.sector || ''}`);
+    return null;
+  }
+
   return (
-    <div className="h-screen flex flex-col bg-gray-100">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center">
-              <div className="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center text-white font-bold mr-2">
-                CZ
-              </div>
-              <h1 className="text-xl font-bold text-gray-900">
-                {isSuperAdmin ? "CZNet Dashboard Master" : `CZNet Dashboard ${user?.sector || ''}`}
-              </h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <div className="relative">
-                <button className="p-2 rounded-full hover:bg-gray-200">
-                  <Bell size={20} />
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-                </button>
-              </div>
-              <div className="flex items-center space-x-2">
-                {/* Usar avatar do usuário ou mostrar iniciais */}
-                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-700 font-medium">
-                  {user?.name?.charAt(0) || 'A'}
+    <ResponsiveLayout title="Dashboard Administrativo">
+      <div className="p-6">
+        <h1 className="text-2xl font-bold text-gray-800 mb-6">
+          {isSuperAdmin ? 'Dashboard Master' : `Dashboard ${user?.sector}`}
+        </h1>
+
+        {loading ? (
+          <div className="flex justify-center items-center py-12">
+            <svg className="animate-spin h-8 w-8 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Card de usuários (apenas para super_admin) */}
+            {isSuperAdmin && (
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold text-gray-800">Usuários</h3>
+                  <Users className="text-blue-500" size={24} />
                 </div>
-                <span className="font-medium text-gray-700">{user?.name || 'Admin CZNet'}</span>
+                <p className="text-3xl font-bold text-gray-900 mb-4">{stats.users}</p>
+                <button
+                  onClick={() => navigate('/admin/users')}
+                  className="flex items-center text-blue-600 hover:text-blue-800"
+                >
+                  <span>Gerenciar Usuários</span>
+                  <ArrowRight size={16} className="ml-1" />
+                </button>
               </div>
-            </div>
-          </div>
-        </div>
-      </header>
+            )}
 
-      {/* Main Content */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
-        <div className="bg-white border-r border-gray-200 w-64 flex-shrink-0">
-          <div className="p-4 border-b border-gray-200">
-            <div className="flex flex-col items-center">
-              <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-red-500 mb-2 bg-gray-200 flex items-center justify-center">
-                {user?.avatar && typeof user.avatar === 'string' ? (
-                  <img 
-                    src={user.avatar} 
-                    alt={user?.name || 'Avatar'} 
-                    className="w-full h-full object-cover" 
-                  />
-                ) : (
-                  <span className="text-2xl font-semibold text-gray-700">
-                    {user?.name?.charAt(0) || 'A'}
-                  </span>
-                )}
+            {/* Card de conteúdo */}
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-gray-800">Conteúdo</h3>
+                <Database className="text-green-500" size={24} />
               </div>
-              <h3 className="font-semibold text-gray-800 text-center">{user?.name || 'Admin CZNet'}</h3>
-              <span className="text-xs text-gray-500">
-                {user?.role === 'super_admin' ? 'Master Admin' : user?.role === 'admin' ? `Admin ${user.sector}` : user?.role || 'Usuário'}
-              </span>
-            </div>
-          </div>
-
-          <nav className="mt-4 px-2 space-y-1">
-            {/* Apenas mostrar o setor do usuário, exceto para superadmin */}
-            {isSuperAdmin ? (
-              // Mostrar todos os setores para o superadmin
-              <>
-                <button 
-                  onClick={() => navigateToSector(Sector.SUPORTE)}
-                  className={`flex items-center w-full justify-start space-x-3 p-3 rounded-lg ${
-                    userSector === Sector.SUPORTE ? 'bg-red-100 text-red-600' : 'hover:bg-gray-200 transition-colors'
-                  }`}
-                >
-                  <Headphones size={20} />
-                  <span>Suporte</span>
-                </button>
-                
-                <button 
-                  onClick={() => navigateToSector(Sector.TECNICO)}
-                  className={`flex items-center w-full justify-start space-x-3 p-3 rounded-lg ${
-                    userSector === Sector.TECNICO ? 'bg-red-100 text-red-600' : 'hover:bg-gray-200 transition-colors'
-                  }`}
-                >
-                  <Upload size={20} />
-                  <span>Técnico</span>
-                </button>
-                
-                <button 
-                  onClick={() => navigateToSector(Sector.NOC)}
-                  className={`flex items-center w-full justify-start space-x-3 p-3 rounded-lg ${
-                    userSector === Sector.NOC ? 'bg-red-100 text-red-600' : 'hover:bg-gray-200 transition-colors'
-                  }`}
-                >
-                  <Bell size={20} />
-                  <span>NOC</span>
-                </button>
-                
-                <button 
-                  onClick={() => navigateToSector(Sector.COMERCIAL)}
-                  className={`flex items-center w-full justify-start space-x-3 p-3 rounded-lg ${
-                    userSector === Sector.COMERCIAL ? 'bg-red-100 text-red-600' : 'hover:bg-gray-200 transition-colors'
-                  }`}
-                >
-                  <Menu size={20} />
-                  <span>Comercial</span>
-                </button>
-                
-                <button 
-                  onClick={() => navigateToSector(Sector.ADM)}
-                  className={`flex items-center w-full justify-start space-x-3 p-3 rounded-lg ${
-                    userSector === Sector.ADM ? 'bg-red-100 text-red-600' : 'hover:bg-gray-200 transition-colors'
-                  }`}
-                >
-                  <Search size={20} />
-                  <span>ADM</span>
-                </button>
-              </>
-            ) : (
-              // Mostrar apenas o setor do usuário para outros usuários
-              <button 
-                onClick={() => navigateToSector(userSector)}
-                className="flex items-center w-full justify-start space-x-3 p-3 rounded-lg bg-red-100 text-red-600"
+              <p className="text-3xl font-bold text-gray-900 mb-4">{stats.content.total}</p>
+              <button
+                onClick={() => navigate(`/${user?.sector}`)}
+                className="flex items-center text-green-600 hover:text-green-800"
               >
-                {userSector === Sector.SUPORTE && <Headphones size={20} />}
-                {userSector === Sector.TECNICO && <Upload size={20} />}
-                {userSector === Sector.NOC && <Bell size={20} />}
-                {userSector === Sector.COMERCIAL && <Menu size={20} />}
-                {userSector === Sector.ADM && <Search size={20} />}
-                <span>{userSector.charAt(0).toUpperCase() + userSector.slice(1)}</span>
+                <span>Gerenciar Conteúdo</span>
+                <ArrowRight size={16} className="ml-1" />
+              </button>
+            </div>
+
+            {/* Card de conteúdo por tipo */}
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-gray-800">Conteúdo por Tipo</h3>
+              </div>
+              <div className="space-y-2">
+                {Object.entries(stats.content.byType).map(([type, count]) => (
+                  <div key={type} className="flex justify-between items-center">
+                    <span className="text-gray-700 capitalize">{type}</span>
+                    <span className="font-semibold">{count as number}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Card de conteúdo por setor (apenas para super_admin) */}
+            {isSuperAdmin && (
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold text-gray-800">Conteúdo por Setor</h3>
+                </div>
+                <div className="space-y-2">
+                  {Object.entries(stats.content.bySector).map(([sector, count]) => (
+                    <div key={sector} className="flex justify-between items-center">
+                      <span className="text-gray-700 capitalize">{sector}</span>
+                      <span className="font-semibold">{count as number}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Ações rápidas */}
+        <div className="mt-8">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">Ações Rápidas</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <button
+              onClick={() => navigate(`/${user?.sector}`)}
+              className="p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow flex items-center"
+            >
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mr-3">
+                <Database size={20} className="text-red-600" />
+              </div>
+              <div className="text-left">
+                <h3 className="font-medium">Gerenciar Conteúdo</h3>
+                <p className="text-sm text-gray-500">
+                  {isSuperAdmin ? 'Ver todos os setores' : `Setor ${user?.sector}`}
+                </p>
+              </div>
+            </button>
+
+            {isSuperAdmin && (
+              <button
+                onClick={() => navigate('/admin/users')}
+                className="p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow flex items-center"
+              >
+                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                  <Users size={20} className="text-blue-600" />
+                </div>
+                <div className="text-left">
+                  <h3 className="font-medium">Gerenciar Usuários</h3>
+                  <p className="text-sm text-gray-500">
+                    Criar, editar e excluir usuários
+                  </p>
+                </div>
               </button>
             )}
-            
-            {/* Ferramentas exclusivas para super_admin ou admins */}
-            {(isSuperAdmin || user?.role === 'admin') && (
-              <>
-                <div className="mt-6 pt-6 border-t border-gray-200">
-                  <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    Ferramentas Admin
-                  </h3>
-                </div>
-                
-                {isSuperAdmin && (
-                  <button 
-                    onClick={() => navigate('/admin/users')}
-                    className="flex items-center w-full justify-start space-x-3 p-3 rounded-lg hover:bg-gray-200 transition-colors"
-                  >
-                    <Users size={20} />
-                    <span>Gerenciar Usuários</span>
-                  </button>
-                )}
-                
-                <button 
-                  className="flex items-center w-full justify-start space-x-3 p-3 rounded-lg hover:bg-gray-200 transition-colors"
-                >
-                  <Database size={20} />
-                  <span>Gerenciar Conteúdo</span>
-                </button>
-              </>
-            )}
-            
-            <button 
-              onClick={handleLogout}
-              className="flex items-center w-full justify-start space-x-3 p-3 rounded-lg hover:bg-gray-200 transition-colors text-red-600 mt-8"
+
+            <button
+              onClick={() => navigate('/admin/users/register')}
+              className="p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow flex items-center"
             >
-              <LogOut size={20} />
-              <span>Sair</span>
+              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                <Users size={20} className="text-green-600" />
+              </div>
+              <div className="text-left">
+                <h3 className="font-medium">Registrar Usuário</h3>
+                <p className="text-sm text-gray-500">
+                  {isSuperAdmin ? 'Criar usuário em qualquer setor' : `Criar usuário no setor ${user?.sector}`}
+                </p>
+              </div>
             </button>
-          </nav>
-        </div>
-
-        {/* Content Area */}
-        <div className="flex-1 overflow-auto">
-          <div className="p-6">
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold text-gray-800">
-                {isSuperAdmin 
-                  ? "Dashboard Principal" 
-                  : user?.role === 'admin' 
-                    ? `Dashboard ${user.sector}` 
-                    : `Visualização ${user?.sector || 'do Sistema'}`}
-              </h2>
-              <p className="text-gray-600 mt-1">
-                {isSuperAdmin 
-                  ? "Visão geral de todos os setores" 
-                  : user?.role === 'admin' 
-                    ? `Gerencie o conteúdo do setor ${user.sector}` 
-                    : `Visualização do conteúdo do setor ${user?.sector || ''}`}
-              </p>
-            </div>
-
-            {/* Content Tabs */}
-            <div className="mb-6 bg-white p-4 rounded-lg shadow-sm">
-              <div className="flex flex-wrap border-b">
-                <button className="mr-4 py-2 px-1 font-medium text-red-600 border-b-2 border-red-600">
-                  <div className="flex items-center">
-                    <Layers size={18} className="mr-1" />
-                    <span>Todos</span>
-                  </div>
-                </button>
-                <button className="mr-4 py-2 px-1 font-medium text-gray-500 hover:text-gray-700">
-                  <div className="flex items-center">
-                    <Upload size={18} className="mr-1" />
-                    <span>Fotos</span>
-                  </div>
-                </button>
-                <button className="mr-4 py-2 px-1 font-medium text-gray-500 hover:text-gray-700">
-                  <div className="flex items-center">
-                    <Upload size={18} className="mr-1" />
-                    <span>Vídeos</span>
-                  </div>
-                </button>
-                <button className="mr-4 py-2 px-1 font-medium text-gray-500 hover:text-gray-700">
-                  <div className="flex items-center">
-                    <FileText size={18} className="mr-1" />
-                    <span>Textos</span>
-                  </div>
-                </button>
-                <button className="mr-4 py-2 px-1 font-medium text-gray-500 hover:text-gray-700">
-                  <div className="flex items-center">
-                    <Type size={18} className="mr-1" />
-                    <span>Títulos</span>
-                  </div>
-                </button>
-              </div>
-            </div>
-
-            {/* Add Content Button - apenas para superadmin ou admin do setor */}
-            {(isSuperAdmin || user?.role === 'admin') && (
-              <div className="mb-6">
-                <button className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors">
-                  Adicionar Conteúdo
-                </button>
-              </div>
-            )}
-
-            {/* Content Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Card 1 */}
-              <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                <div className="p-4">
-                  <div className="flex items-center justify-between">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      Texto
-                    </span>
-                    <span className="text-xs text-gray-500">15/01/2023</span>
-                  </div>
-                  <h3 className="mt-2 text-lg font-medium text-gray-900">Como resetar o roteador</h3>
-                  <div className="mt-4 h-32 bg-gray-100 rounded flex items-center justify-center">
-                    <FileText size={40} className="text-gray-400" />
-                  </div>
-                  <div className="mt-4 flex justify-between">
-                    <button className="text-red-600 hover:text-red-700 font-medium text-sm">
-                      Ver detalhes
-                    </button>
-                    
-                    {/* Opção de editar apenas para admin e superadmin */}
-                    {(isSuperAdmin || user?.role === 'admin') && (
-                      <button className="text-gray-500 hover:text-gray-700 font-medium text-sm">
-                        Editar
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 2 */}
-              <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                <div className="p-4">
-                  <div className="flex items-center justify-between">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                      Foto
-                    </span>
-                    <span className="text-xs text-gray-500">20/02/2023</span>
-                  </div>
-                  <h3 className="mt-2 text-lg font-medium text-gray-900">Configuração de rede WiFi</h3>
-                  <div className="mt-4 h-32 bg-gray-100 rounded flex items-center justify-center">
-                    <Upload size={40} className="text-gray-400" />
-                  </div>
-                  <div className="mt-4 flex justify-between">
-                    <button className="text-red-600 hover:text-red-700 font-medium text-sm">
-                      Ver detalhes
-                    </button>
-                    
-                    {/* Opção de editar apenas para admin e superadmin */}
-                    {(isSuperAdmin || user?.role === 'admin') && (
-                      <button className="text-gray-500 hover:text-gray-700 font-medium text-sm">
-                        Editar
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 3 */}
-              <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                <div className="p-4">
-                  <div className="flex items-center justify-between">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      Vídeo
-                    </span>
-                    <span className="text-xs text-gray-500">10/03/2023</span>
-                  </div>
-                  <h3 className="mt-2 text-lg font-medium text-gray-900">Tutorial troca de senha</h3>
-                  <div className="mt-4 h-32 bg-gray-100 rounded flex items-center justify-center">
-                    <Upload size={40} className="text-gray-400" />
-                  </div>
-                  <div className="mt-4 flex justify-between">
-                    <button className="text-red-600 hover:text-red-700 font-medium text-sm">
-                      Ver detalhes
-                    </button>
-                    
-                    {/* Opção de editar apenas para admin e superadmin */}
-                    {(isSuperAdmin || user?.role === 'admin') && (
-                      <button className="text-gray-500 hover:text-gray-700 font-medium text-sm">
-                        Editar
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>
-    </div>
+    </ResponsiveLayout>
   );
 };
 

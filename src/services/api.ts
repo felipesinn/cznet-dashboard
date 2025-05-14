@@ -16,4 +16,17 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// Interceptor para tratamento de erros de autenticação
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default api;
