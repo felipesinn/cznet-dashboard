@@ -32,6 +32,7 @@ const ContentForm: React.FC<ContentFormProps> = ({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<string | null>(null);
 
   // Efeito para resetar o formulário quando os dados iniciais mudarem
   useEffect(() => {
@@ -39,7 +40,7 @@ const ContentForm: React.FC<ContentFormProps> = ({
       setFormData({
         title: initialData.title || '',
         description: initialData.description || '',
-        type: initialData.type as ContentType || ContentType.TEXT,
+        type: initialData.type || ContentType.TEXT,
         sector: initialData.sector as SectorType || userSector,
         textContent: initialData.textContent || '',
       });
@@ -63,11 +64,18 @@ const ContentForm: React.FC<ContentFormProps> = ({
     
     setSelectedFile(null);
     setError(null);
+    setDebugInfo(null);
   }, [initialData, userSector]);
 
   // Função para lidar com a seleção de arquivos
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
+    
+    if (file) {
+      console.log("Arquivo selecionado:", file.name, file.type, file.size);
+      setDebugInfo(`Arquivo: ${file.name}, Tipo: ${file.type}, Tamanho: ${file.size} bytes`);
+    }
+    
     setSelectedFile(file);
     
     // Criar URL de preview para imagens
@@ -103,19 +111,42 @@ const ContentForm: React.FC<ContentFormProps> = ({
       }
       
       // Para foto/vídeo, verificar se há arquivo (apenas na criação)
-      if (!initialData && (formData.type === ContentType.PHOTO || formData.type === ContentType.VIDEO) && !selectedFile) {
+      if (!initialData && ((formData.type as ContentType) === ContentType.PHOTO || (formData.type as ContentType) === ContentType.VIDEO) && !selectedFile) {
         throw new Error(`É necessário selecionar um arquivo para o tipo ${formData.type}`);
       }
       
-      // Preparar dados para envio
-      const dataToSubmit = {
-        ...formData,
-        file: selectedFile || undefined,
-      };
+      // Criar FormData diretamente aqui em vez de passar o objeto simples
+      const formDataObj = new FormData();
       
-      // Enviar dados
-      await onSubmit(dataToSubmit);
+      // Adicionar campos básicos
+      formDataObj.append('title', formData.title);
+      formDataObj.append('type', formData.type);
+      formDataObj.append('sector', formData.sector);
+      
+      // Adicionar campos opcionais
+      if (formData.description) {
+        formDataObj.append('description', formData.description);
+      }
+      
+      if (formData.textContent) {
+        formDataObj.append('textContent', formData.textContent);
+      }
+      
+      // Adicionar arquivo se existir
+      if (selectedFile) {
+        formDataObj.append('file', selectedFile);
+        console.log("Arquivo adicionado ao FormData:", selectedFile.name);
+      }
+      
+      console.log("Enviando FormData com campos:", 
+        Array.from(formDataObj.entries()).map(([key]) => key).join(", ")
+      );
+      
+      // Enviar FormData
+      await onSubmit(formDataObj);
     } catch (error) {
+      console.error("Erro ao enviar formulário:", error);
+      
       if (error instanceof Error) {
         setError(error.message);
       } else {
@@ -149,6 +180,12 @@ const ContentForm: React.FC<ContentFormProps> = ({
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           {error}
+        </div>
+      )}
+      
+      {debugInfo && (
+        <div className="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded mb-4 text-sm">
+          <strong>Debug:</strong> {debugInfo}
         </div>
       )}
       
@@ -246,13 +283,13 @@ const ContentForm: React.FC<ContentFormProps> = ({
         )}
         
         {/* Upload de arquivo (para tipos PHOTO e VIDEO) */}
-        {(formData.type === ContentType.PHOTO || formData.type === ContentType.VIDEO) && (
+        {((formData.type as ContentType) === ContentType.PHOTO || (formData.type as ContentType) === ContentType.VIDEO) && (
           <div className="mb-4">
             <label htmlFor="file" className="block text-sm font-medium text-gray-700 mb-1">
               {initialData ? 'Substituir Arquivo' : 'Arquivo *'}
             </label>
             
-            {previewUrl && formData.type === ContentType.PHOTO ? (
+            {previewUrl && formData.type === ContentType.PHOTO.toString() ? (
               <div className="mb-2">
                 <img 
                   src={previewUrl} 
@@ -276,7 +313,7 @@ const ContentForm: React.FC<ContentFormProps> = ({
                 id="file"
                 onChange={handleFileChange}
                 className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                accept={formData.type === ContentType.PHOTO ? 'image/*' : 'video/*'}
+                accept={formData.type === ContentType.PHOTO.toString() ? 'image/*' : 'video/*'}
                 required={!initialData} // Obrigatório apenas na criação
               />
             )}

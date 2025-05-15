@@ -33,7 +33,8 @@ export interface ContentCreator {
 
 // Interface para item de conteúdo
 export interface ContentItem {
-  id: string;
+  images: boolean;
+  id: string | number;
   title: string;
   description?: string;
   type: ContentType;
