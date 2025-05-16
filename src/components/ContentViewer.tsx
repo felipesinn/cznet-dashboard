@@ -1,30 +1,252 @@
-import React, { useState } from 'react';
-import { X, Clock, User, Eye, ChevronLeft, ChevronRight, Edit, Trash2, ZoomIn, ZoomOut, RotateCw } from 'lucide-react';
+import React, { useState, useCallback, useMemo } from 'react';
+import { X, Clock, User, Eye, ChevronLeft, ChevronRight, Edit, Trash2, ZoomIn, ZoomOut, RotateCw, Plus } from 'lucide-react';
 import { type ContentItem, ContentCategory } from '../types/content.types';
 
+// Interfaces relacionadas às adições de conteúdo
+interface ContentAddition {
+  id: string;
+  title?: string;
+  content: string;
+  filePath?: string;
+  createdAt: string;
+  createdByName?: string;
+}
+
+interface StepsData {
+  additions?: ContentAddition[];
+  [key: string]: unknown;
+}
+
+// Props para componente principal
 interface ContentViewerProps {
   content: ContentItem;
   onClose: () => void;
   onEdit?: (content: ContentItem) => void;
   onDelete?: (content: ContentItem) => void;
+  onAddContent?: (content: ContentItem) => void;
   isAdmin?: boolean;
   isSuperAdmin?: boolean;
 }
 
+// Hook personalizado para gerenciar visualização de imagens
+const useImageViewer = () => {
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageZoom, setImageZoom] = useState<number>(1);
+  const [imageRotation, setImageRotation] = useState<number>(0);
+  
+  const openImage = useCallback((url: string) => {
+    setImagePreview(url);
+    setImageZoom(1);
+    setImageRotation(0);
+  }, []);
+  
+  const closeImage = useCallback(() => {
+    setImagePreview(null);
+  }, []);
+  
+  const zoomIn = useCallback(() => {
+    setImageZoom(prev => Math.min(prev + 0.2, 3));
+  }, []);
+  
+  const zoomOut = useCallback(() => {
+    setImageZoom(prev => Math.max(prev - 0.2, 0.5));
+  }, []);
+  
+  const rotate = useCallback(() => {
+    setImageRotation(prev => (prev + 90) % 360);
+  }, []);
+  
+  return {
+    imagePreview,
+    imageZoom,
+    imageRotation,
+    openImage,
+    closeImage,
+    zoomIn,
+    zoomOut,
+    rotate
+  };
+};
+
+// Componente para o modal de imagens ampliadas
+const ImageModal: React.FC<{
+  imageUrl: string;
+  zoom: number;
+  rotation: number;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  onRotate: () => void;
+  onClose: () => void;
+}> = ({ imageUrl, zoom, rotation, onZoomIn, onZoomOut, onRotate, onClose }) => (
+  <div 
+    className="fixed inset-0 bg-black bg-opacity-90 flex flex-col z-[60]"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Visualização ampliada de imagem"
+  >
+    <div className="absolute top-4 right-4 flex space-x-2">
+      <button
+        onClick={onZoomIn}
+        className="p-2 bg-gray-800 text-white rounded-md hover:bg-gray-700"
+        title="Aumentar zoom"
+        aria-label="Aumentar zoom"
+      >
+        <ZoomIn size={20} />
+      </button>
+      <button
+        onClick={onZoomOut}
+        className="p-2 bg-gray-800 text-white rounded-md hover:bg-gray-700"
+        title="Diminuir zoom"
+        aria-label="Diminuir zoom"
+      >
+        <ZoomOut size={20} />
+      </button>
+      <button
+        onClick={onRotate}
+        className="p-2 bg-gray-800 text-white rounded-md hover:bg-gray-700"
+        title="Rotacionar"
+        aria-label="Rotacionar imagem"
+      >
+        <RotateCw size={20} />
+      </button>
+      <button
+        onClick={onClose}
+        className="p-2 bg-gray-800 text-white rounded-md hover:bg-gray-700"
+        title="Fechar"
+        aria-label="Fechar visualização"
+      >
+        <X size={20} />
+      </button>
+    </div>
+    
+    <div 
+      className="flex-1 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <img
+        src={imageUrl}
+        alt="Visualização ampliada"
+        className="max-h-full max-w-full object-contain transition-transform duration-200"
+        style={{ 
+          transform: `scale(${zoom}) rotate(${rotation}deg)`,
+          cursor: 'zoom-out'
+        }}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (zoom >= 2) {
+            onZoomOut();
+          } else {
+            onClose();
+          }
+        }}
+      />
+    </div>
+  </div>
+);
+
+// Componente para exibir uma adição de conteúdo
+const ContentAdditionCard: React.FC<{
+  addition: ContentAddition;
+  onImageClick: (url: string) => void;
+  isRecent: boolean;
+}> = ({ addition, onImageClick, isRecent }) => (
+  <div className="bg-green-50 p-6 rounded-md border-l-4 border-green-500 relative">
+    {isRecent && (
+      <span className="absolute top-2 right-2 bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+        NOVO
+      </span>
+    )}
+    
+    {addition.title && (
+      <h3 className="text-lg font-bold text-green-800 mb-4">{addition.title}</h3>
+    )}
+    
+    <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: addition.content }} />
+    
+    {addition.filePath && (
+      <div className="mt-4">
+        <img
+          src={`/api/uploads/${addition.filePath}`}
+          alt={addition.title || `Imagem adicionada`}
+          className="max-w-full h-auto rounded-md border border-gray-200 cursor-pointer hover:opacity-90"
+          onClick={() => onImageClick(`/api/uploads/${addition.filePath}`)}
+        />
+      </div>
+    )}
+    
+    <div className="mt-4 text-sm text-green-700 flex items-center">
+      <Clock size={14} className="mr-1" />
+      <span>
+        Adicionado em {new Date(addition.createdAt).toLocaleDateString('pt-BR')}
+        {addition.createdByName && ` por ${addition.createdByName}`}
+      </span>
+    </div>
+  </div>
+);
+
+// Componente de tipo/badge
+const ContentTypeBadge: React.FC<{ content: ContentItem }> = ({ content }) => {
+  const getBadgeInfo = () => {
+    let bgColor = 'bg-blue-100 text-blue-800';
+    let label = 'Documento';
+    
+    if (content.category === ContentCategory.TUTORIAL || 
+        content.title.toLowerCase().includes('tutorial') || 
+        content.title.toLowerCase().includes('guia')) {
+      bgColor = 'bg-blue-100 text-blue-800';
+      label = 'Tutorial';
+    } else if (content.category === ContentCategory.PROCEDURE || 
+               content.title.toLowerCase().includes('procedimento') || 
+               content.title.toLowerCase().includes('processo')) {
+      bgColor = 'bg-green-100 text-green-800';
+      label = 'Procedimento';
+    } else if (content.category === ContentCategory.CONFIGURATION || 
+               content.title.toLowerCase().includes('configuração') || 
+               content.title.toLowerCase().includes('config')) {
+      bgColor = 'bg-purple-100 text-purple-800';
+      label = 'Configuração';
+    }
+    
+    return { bgColor, label };
+  };
+
+  const { bgColor, label } = getBadgeInfo();
+  
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${bgColor}`}>
+      {label}
+    </span>
+  );
+};
+
+// Componente principal
 const ContentViewer: React.FC<ContentViewerProps> = ({ 
   content, 
   onClose, 
   onEdit, 
   onDelete,
+  onAddContent,
   isAdmin = false,
   isSuperAdmin = false 
 }) => {
-  // Estados para visualização de imagens
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [imageZoom, setImageZoom] = useState<number>(1);
-  const [imageRotation, setImageRotation] = useState<number>(0);
+  // Hooks personalizados
+  const {
+    imagePreview,
+    imageZoom,
+    imageRotation,
+    openImage,
+    closeImage,
+    zoomIn,
+    zoomOut,
+    rotate
+  } = useImageViewer();
 
-  // Obter autor do documento, se disponível
+  // Utils e formatadores
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR');
+  };
+  
   const getAuthorName = () => {
     if (content.creator && content.creator.name) {
       return content.creator.name;
@@ -32,63 +254,55 @@ const ContentViewer: React.FC<ContentViewerProps> = ({
     return "Equipe CZNet";
   };
 
-  // Obter número de visualizações, com padrão simulado
   const getViewCount = () => {
     if (content.views) return content.views;
     return Math.floor(Math.random() * 500) + 50;
   };
   
-  // Abrir visualização de imagem em tamanho ampliado
-  const handleOpenImage = (url: string) => {
-    setImagePreview(url);
-    setImageZoom(1);
-    setImageRotation(0);
-  };
+  // Verifica se uma adição é recente (menos de 7 dias)
+  const isRecentAddition = useCallback((dateString: string) => {
+    if (!dateString) return false;
+    
+    const additionDate = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - additionDate.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    return diffDays <= 7;
+  }, []);
   
-  // Fechar visualização de imagem
-  const handleCloseImage = () => {
-    setImagePreview(null);
-  };
-  
-  // Controles de zoom e rotação
-  const handleZoomIn = () => {
-    setImageZoom(prev => Math.min(prev + 0.2, 3));
-  };
-  
-  const handleZoomOut = () => {
-    setImageZoom(prev => Math.max(prev - 0.2, 0.5));
-  };
-  
-  const handleRotateImage = () => {
-    setImageRotation(prev => (prev + 90) % 360);
-  };
-  
-  // Função para renderizar conteúdo rico com seções
-  const renderRichContent = () => {
-    // Se o conteúdo tiver seções marcadas com separadores
-    if (content.textContent && content.textContent.includes('\n\n---\n\n')) {
-      const sections = content.textContent.split('\n\n---\n\n');
-      
-      return (
-        <div className="space-y-6">
-          {sections.map((section, index) => (
-            <div key={index} className="bg-gray-50 p-4 rounded-md">
-              <div className="prose max-w-none">
-                {section.split('\n').map((line, lineIndex) => (
-                  <p key={lineIndex}>{line}</p>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      );
+  // Processamento das adições de conteúdo
+  const contentAdditions = useMemo(() => {
+    // Verificar se o conteúdo tem o campo steps
+    if (!content.steps || 
+        (typeof content.steps === 'string' && content.steps?.trim() === '')) {
+      return [];
     }
     
-    // Renderização estruturada padrão
-    return renderStructuredContent();
-  };
+    try {
+      let stepsData: StepsData | string | boolean | null = content.steps;
+      
+      // Se steps for uma string, converter para objeto
+      if (typeof stepsData === 'string') {
+        stepsData = JSON.parse(stepsData);
+      }
+      
+      // Se tiver o formato esperado com array de adições
+      if (stepsData && 
+          typeof stepsData === 'object' && 
+          'additions' in stepsData && 
+          Array.isArray(stepsData.additions)) {
+        return stepsData.additions;
+      }
+      
+      return [];
+    } catch (error) {
+      console.error('Erro ao processar adições de conteúdo:', error);
+      return [];
+    }
+  }, [content.steps]);
   
-  // Função para renderizar imagens do conteúdo
+  // Renderizadores de conteúdo
   const renderImages = () => {
     // Se tivermos múltiplas imagens
     if (content.images && Array.isArray(content.images) && content.images.length > 0) {
@@ -102,7 +316,7 @@ const ContentViewer: React.FC<ContentViewerProps> = ({
                   src={`/api/uploads/${typeof image === 'string' ? image : image.path}`}
                   alt={`Imagem ${index + 1}`}
                   className="w-full h-48 object-cover rounded-md border border-gray-200 cursor-pointer hover:opacity-90"
-                  onClick={() => handleOpenImage(`/api/uploads/${typeof image === 'string' ? image : image.path}`)}
+                  onClick={() => openImage(`/api/uploads/${typeof image === 'string' ? image : image.path}`)}
                 />
               </div>
             ))}
@@ -119,7 +333,7 @@ const ContentViewer: React.FC<ContentViewerProps> = ({
             src={`/api/uploads/${content.filePath}`}
             alt={content.title}
             className="max-w-full h-auto rounded-md border border-gray-200 cursor-pointer hover:opacity-90"
-            onClick={() => handleOpenImage(`/api/uploads/${content.filePath}`)}
+            onClick={() => openImage(`/api/uploads/${content.filePath}`)}
           />
         </div>
       );
@@ -128,12 +342,79 @@ const ContentViewer: React.FC<ContentViewerProps> = ({
     return null;
   };
   
-  // Função para converter texto plano em conteúdo estruturado
-  const renderStructuredContent = () => {
-    // Na implementação real, você teria um parser adequado ou armazenaria
-    // o conteúdo já estruturado no banco de dados
+  const renderMainContent = () => {
+    // Se temos adições de conteúdo, usar o formato com adições
+    if (contentAdditions.length > 0) {
+      return renderStepsContent();
+    }
     
-    // Aqui estamos simulando uma estrutura baseada no conteúdo
+    // Usar o renderizador de conteúdo rico padrão
+    if (content.textContent && content.textContent.includes('\n\n---\n\n')) {
+      return renderSectionedContent();
+    }
+    
+    // Renderização estruturada padrão
+    return renderStructuredContent();
+  };
+  
+  const renderStepsContent = () => {
+    return (
+      <div className="space-y-8">
+        {/* Conteúdo original */}
+        <div className="bg-white rounded-md">
+          <div className="prose max-w-none">
+            {content.textContent && (
+              <div dangerouslySetInnerHTML={{ __html: content.textContent }} />
+            )}
+          </div>
+        </div>
+        
+        {/* Separador para adições */}
+        {contentAdditions.length > 0 && (
+          <div className="relative my-8">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300"></div>
+            </div>
+            <div className="relative flex justify-center">
+              <span className="px-3 bg-white text-sm text-gray-500">Conteúdo Adicionado</span>
+            </div>
+          </div>
+        )}
+        
+        {/* Adições de conteúdo */}
+        <div className="space-y-6">
+          {contentAdditions.map((addition, index) => (
+            <ContentAdditionCard
+              key={addition.id || index}
+              addition={addition}
+              onImageClick={openImage}
+              isRecent={isRecentAddition(addition.createdAt)}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  };
+  
+  const renderSectionedContent = () => {
+    const sections = content.textContent!.split('\n\n---\n\n');
+    
+    return (
+      <div className="space-y-6">
+        {sections.map((section, index) => (
+          <div key={index} className="bg-gray-50 p-4 rounded-md">
+            <div className="prose max-w-none">
+              {section.split('\n').map((line, lineIndex) => (
+                <p key={lineIndex}>{line}</p>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+  
+  const renderStructuredContent = () => {
     const text = content.textContent || '';
     if (!text) {
       return (
@@ -148,7 +429,6 @@ const ContentViewer: React.FC<ContentViewerProps> = ({
     
     if (hasStructure) {
       // Se já tem estrutura, formatamos melhor
-      // Esta é uma implementação simples - uma real seria mais robusta
       const lines = text.split('\n');
       return (
         <div className="space-y-4">
@@ -191,66 +471,57 @@ const ContentViewer: React.FC<ContentViewerProps> = ({
         </div>
       );
     } else {
-      // Se não tem estrutura, criamos uma estrutura simulada baseada no conteúdo
-      // Na implementação real, os autores poderiam formatar diretamente
+      // Se não tem estrutura, criamos uma estrutura lógica
       const paragraphs = text.split('\n\n');
-      
-      // Tentar criar uma estrutura lógica baseada nos parágrafos
       const sections = [];
       
       if (paragraphs.length <= 1) {
-        // Texto muito curto, talvez apenas um parágrafo
         sections.push({
           id: "1",
           title: "Conteúdo",
           content: text
         });
+      } else if (paragraphs.length >= 4) {
+        // Estrutura completa
+        sections.push({
+          id: "1",
+          title: "Introdução",
+          content: paragraphs[0]
+        });
+        
+        sections.push({
+          id: "2",
+          title: "Procedimento",
+          content: ""
+        });
+        
+        // Subseções do meio
+        const middleParagraphs = paragraphs.slice(1, paragraphs.length - 1);
+        middleParagraphs.forEach((para, idx) => {
+          sections.push({
+            id: `2.${idx + 1}`,
+            title: `Etapa ${idx + 1}`,
+            content: para
+          });
+        });
+        
+        sections.push({
+          id: "3",
+          title: "Conclusão",
+          content: paragraphs[paragraphs.length - 1]
+        });
       } else {
-        // Mais estruturado, tentar criar seções lógicas
-        if (paragraphs.length >= 4) {
-          // Suficiente para criar uma estrutura completa
+        // Estrutura simples
+        paragraphs.forEach((para, idx) => {
           sections.push({
-            id: "1",
-            title: "Introdução",
-            content: paragraphs[0]
+            id: String(idx + 1),
+            title: idx === 0 ? "Introdução" : 
+                   idx === paragraphs.length - 1 ? "Conclusão" : `Parte ${idx}`,
+            content: para
           });
-          
-          sections.push({
-            id: "2",
-            title: "Procedimento",
-            content: ""
-          });
-          
-          // Dividir o conteúdo do meio em subseções
-          const middleParagraphs = paragraphs.slice(1, paragraphs.length - 1);
-          
-          middleParagraphs.forEach((para, idx) => {
-            sections.push({
-              id: `2.${idx + 1}`,
-              title: `Etapa ${idx + 1}`,
-              content: para
-            });
-          });
-          
-          sections.push({
-            id: "3",
-            title: "Conclusão",
-            content: paragraphs[paragraphs.length - 1]
-          });
-        } else {
-          // Estrutura mais simples
-          paragraphs.forEach((para, idx) => {
-            sections.push({
-              id: String(idx + 1),
-              title: idx === 0 ? "Introdução" : 
-                     idx === paragraphs.length - 1 ? "Conclusão" : `Parte ${idx}`,
-              content: para
-            });
-          });
-        }
+        });
       }
 
-      // Renderizar as seções estruturadas
       return (
         <div className="space-y-4">
           {sections.map(section => (
@@ -275,47 +546,16 @@ const ContentViewer: React.FC<ContentViewerProps> = ({
     }
   };
 
-  // Formatar a data
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('pt-BR');
-  };
-
-  // Obter badge do tipo de conteúdo
-  const getTypeBadge = () => {
-    let bgColor = 'bg-blue-100 text-blue-800';
-    let label = 'Documento';
-    
-    // Por tipo
-    if (content.category === ContentCategory.TUTORIAL || 
-        content.title.toLowerCase().includes('tutorial') || 
-        content.title.toLowerCase().includes('guia')) {
-      bgColor = 'bg-blue-100 text-blue-800';
-      label = 'Tutorial';
-    } else if (content.category === ContentCategory.PROCEDURE || 
-               content.title.toLowerCase().includes('procedimento') || 
-               content.title.toLowerCase().includes('processo')) {
-      bgColor = 'bg-green-100 text-green-800';
-      label = 'Procedimento';
-    } else if (content.category === ContentCategory.CONFIGURATION || 
-               content.title.toLowerCase().includes('configuração') || 
-               content.title.toLowerCase().includes('config')) {
-      bgColor = 'bg-purple-100 text-purple-800';
-      label = 'Configuração';
-    }
-    
-    return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${bgColor}`}>
-        {label}
-      </span>
-    );
-  };
-
-  // Verificar se usuário pode editar/excluir
+  // Controle de permissões
   const canManageContent = isAdmin || isSuperAdmin;
 
   return (
-    <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50 p-4 overflow-auto">
+    <div 
+      className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50 p-4 overflow-auto"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="content-title"
+    >
       <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           {/* Cabeçalho */}
@@ -324,11 +564,12 @@ const ContentViewer: React.FC<ContentViewerProps> = ({
               <div className="w-8 h-8 bg-red-600 text-white rounded-full flex items-center justify-center mr-3">
                 <span className="font-bold">D</span>
               </div>
-              <h2 className="text-2xl font-semibold text-gray-800">{content.title}</h2>
+              <h2 id="content-title" className="text-2xl font-semibold text-gray-800">{content.title}</h2>
             </div>
             <button 
               onClick={onClose}
               className="text-gray-500 hover:text-gray-700"
+              aria-label="Fechar"
             >
               <X size={24} />
             </button>
@@ -336,11 +577,13 @@ const ContentViewer: React.FC<ContentViewerProps> = ({
           
           {/* Metadados */}
           <div className="mb-4 flex flex-wrap gap-2 items-center">
-            {getTypeBadge()}
+            <ContentTypeBadge content={content} />
             
             <span className="text-sm text-gray-500 flex items-center ml-2">
               <Clock size={14} className="mr-1" />
-              Atualizado em {formatDate(content.updatedAt || content.createdAt)}
+              <time dateTime={content.updatedAt || content.createdAt}>
+                Atualizado em {formatDate(content.updatedAt || content.createdAt)}
+              </time>
             </span>
             
             <span className="text-sm text-gray-500 flex items-center ml-2">
@@ -366,18 +609,31 @@ const ContentViewer: React.FC<ContentViewerProps> = ({
           
           {/* Conteúdo estruturado */}
           <div className="bg-white rounded-lg mt-6">
-            {renderRichContent()}
+            {renderMainContent()}
           </div>
           
-          {/* Botões de edição/exclusão para admin */}
+          {/* Botões de ação para admin */}
           {canManageContent && (
             <div className="mt-6 bg-gray-50 p-4 rounded-md">
               <h3 className="text-sm font-medium text-gray-700 mb-3">Ações de Administrador</h3>
-              <div className="flex space-x-2">
+              <div className="flex flex-wrap gap-2">
+                {/* Botão Adicionar Conteúdo - Novo! */}
+                {onAddContent && (
+                  <button
+                    onClick={() => onAddContent(content)}
+                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center"
+                    aria-label="Adicionar conteúdo"
+                  >
+                    <Plus size={16} className="mr-1" />
+                    Adicionar Conteúdo
+                  </button>
+                )}
+                
                 {onEdit && (
                   <button
                     onClick={() => onEdit(content)}
                     className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
+                    aria-label="Editar conteúdo"
                   >
                     <Edit size={16} className="mr-1" />
                     Editar Conteúdo
@@ -388,6 +644,7 @@ const ContentViewer: React.FC<ContentViewerProps> = ({
                   <button
                     onClick={() => onDelete(content)}
                     className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 flex items-center"
+                    aria-label="Excluir conteúdo"
                   >
                     <Trash2 size={16} className="mr-1" />
                     Excluir
@@ -400,11 +657,17 @@ const ContentViewer: React.FC<ContentViewerProps> = ({
           {/* Rodapé */}
           <div className="mt-6 pt-4 border-t flex items-center justify-between">
             <div className="flex space-x-2">
-              <button className="px-4 py-2 bg-gray-200 text-gray-700 rounded flex items-center">
+              <button 
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded flex items-center"
+                aria-label="Conteúdo anterior"
+              >
                 <ChevronLeft size={16} className="mr-1" />
                 Anterior
               </button>
-              <button className="px-4 py-2 bg-gray-200 text-gray-700 rounded flex items-center">
+              <button 
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded flex items-center"
+                aria-label="Próximo conteúdo"
+              >
                 Próximo
                 <ChevronRight size={16} className="ml-1" />
               </button>
@@ -413,6 +676,7 @@ const ContentViewer: React.FC<ContentViewerProps> = ({
             <button
               onClick={onClose}
               className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+              aria-label="Fechar visualização"
             >
               Fechar
             </button>
@@ -422,61 +686,15 @@ const ContentViewer: React.FC<ContentViewerProps> = ({
       
       {/* Modal para visualização ampliada da imagem */}
       {imagePreview && (
-        <div className="fixed inset-0 bg-black bg-opacity-90 flex flex-col z-[60]">
-          <div className="absolute top-4 right-4 flex space-x-2">
-            <button
-              onClick={handleZoomIn}
-              className="p-2 bg-gray-800 text-white rounded-md hover:bg-gray-700"
-              title="Aumentar zoom"
-            >
-              <ZoomIn size={20} />
-            </button>
-            <button
-              onClick={handleZoomOut}
-              className="p-2 bg-gray-800 text-white rounded-md hover:bg-gray-700"
-              title="Diminuir zoom"
-            >
-              <ZoomOut size={20} />
-            </button>
-            <button
-              onClick={handleRotateImage}
-              className="p-2 bg-gray-800 text-white rounded-md hover:bg-gray-700"
-              title="Rotacionar"
-            >
-              <RotateCw size={20} />
-            </button>
-            <button
-              onClick={handleCloseImage}
-              className="p-2 bg-gray-800 text-white rounded-md hover:bg-gray-700"
-              title="Fechar"
-            >
-              <X size={20} />
-            </button>
-          </div>
-          
-          <div 
-            className="flex-1 flex items-center justify-center p-4"
-            onClick={handleCloseImage}
-          >
-            <img
-              src={imagePreview}
-              alt="Visualização ampliada"
-              className="max-h-full max-w-full object-contain transition-transform duration-200"
-              style={{ 
-                transform: `scale(${imageZoom}) rotate(${imageRotation}deg)`,
-                cursor: 'zoom-out'
-              }}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (imageZoom >= 2) {
-                  setImageZoom(1);
-                } else {
-                  handleCloseImage();
-                }
-              }}
-            />
-          </div>
-        </div>
+        <ImageModal
+          imageUrl={imagePreview}
+          zoom={imageZoom}
+          rotation={imageRotation}
+          onZoomIn={zoomIn}
+          onZoomOut={zoomOut}
+          onRotate={rotate}
+          onClose={closeImage}
+        />
       )}
     </div>
   );

@@ -19,7 +19,6 @@ import {
 import { useAuth } from "../../contexts/AuthContext";
 import ResponsiveLayout from "../../components/layout/ResponsiveLayout";
 import ContentCard from "../../components/ContentCard";
-import ContentForm from "../../components/ContentForm";
 import ContentViewer from "../../components/ContentViewer";
 import type { ContentItem, SectorType } from "../../types/content.types";
 import api from "../../services/api";
@@ -288,11 +287,6 @@ const SuporteSection: React.FC<{
   });
 
   // Visualizar conteúdo de forma estruturada
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleViewStructured = (content: ContentItem) => {
-    setViewingStructured(content);
-  };
-
   // Encontrar conteúdos que não são tutoriais nem procedimentos
   const otherContent = filteredContent.filter(
     item => !tutorials.includes(item) && !procedimentos.includes(item)
@@ -892,7 +886,7 @@ const SectorView: React.FC = () => {
           onAddContent={handleAddContent}
           onEditContent={handleEditContent}
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          onViewContent={handleViewContent} onDeleteContent={function (content: ContentItem): void {
+          onViewContent={handleViewContent} onDeleteContent={function (_content: ContentItem): void {
             throw new Error("Function not implemented.");
           } }        />
       );

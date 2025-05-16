@@ -28,11 +28,11 @@ const TutorialViewer: React.FC<TutorialViewerProps> = ({
   
   // Extrair os passos do tutorial
   // Na implementação real, isso viria dos mediaItems ou outra estrutura
-  const steps: TutorialStep[] = tutorial.mediaItems?.map((item: { id: unknown; title: unknown; description: unknown; content: unknown; }) => ({
+  const steps: TutorialStep[] = tutorial.mediaItems?.map((item: { id: string; title: string; description?: string; content?: string; }) => ({
     id: item.id,
     title: item.title,
     description: item.description || '',
-    image: item.content
+    image: item.content || undefined
   })) || [];
   
   // Ordenar os passos pelo campo order

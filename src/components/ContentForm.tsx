@@ -26,7 +26,7 @@ const ContentForm: React.FC<ContentFormProps> = ({
     sector: userSector,
     textContent: '',
   });
-
+  
   // Estado para arquivo selecionado
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -40,7 +40,7 @@ const ContentForm: React.FC<ContentFormProps> = ({
       setFormData({
         title: initialData.title || '',
         description: initialData.description || '',
-        type: initialData.type || ContentType.TEXT,
+        type: (initialData.type as string) || ContentType.TEXT,
         sector: initialData.sector as SectorType || userSector,
         textContent: initialData.textContent || '',
       });
