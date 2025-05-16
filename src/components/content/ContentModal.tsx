@@ -1,6 +1,6 @@
 import React from 'react';
 import { X } from 'lucide-react';
-import { type ContentItem, ContentType } from '../types/content.types';
+import { type ContentItem, ContentType } from '../../types/content.types';
 
 interface ContentModalProps {
   content: ContentItem;

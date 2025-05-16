@@ -1,4 +1,3 @@
-// src/hooks/useImageViewer.ts
 import { useState, useCallback } from 'react';
 
 export const useImageViewer = () => {
@@ -39,3 +38,5 @@ export const useImageViewer = () => {
     rotate
   };
 };
+
+export default useImageViewer;

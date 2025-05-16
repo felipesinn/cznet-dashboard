@@ -1,4 +1,3 @@
-// src/services/auth.service.ts
 import api from './api';
 import type { LoginCredentials, LoginResponse, User, AuthState } from '../types/auth.types';
 
@@ -40,6 +39,7 @@ class AuthService {
         role: userData.role,
         sector: userData.sector || 'adm',
         avatar: userData.avatar,
+        isActive: userData.isActive
       };
     } catch (error) {
       console.error('Erro ao obter usuário atual:', error);
@@ -62,7 +62,8 @@ class AuthService {
     return {
       user: this.getCurrentUser(),
       isAuthenticated: this.isAuthenticated(),
-      loading: false
+      loading: false,
+      error: null
     };
   }
   

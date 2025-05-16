@@ -1,11 +1,12 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import type { UserRole, UserSector } from '../types/common.types';
 
 interface PrivateRouteProps {
   children: React.ReactNode;
-  allowedRoles?: string[];
-  allowedSectors?: string[];
+  allowedRoles?: UserRole[];
+  allowedSectors?: UserSector[];
 }
 
 const PrivateRoute: React.FC<PrivateRouteProps> = ({ 
@@ -21,7 +22,7 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({
     return <Navigate to="/login" replace />;
   }
 
-  // Se o usuário não tiver um papel definido
+  // Se o usuário não estiver definido
   if (!user) {
     return <Navigate to="/login" replace />;
   }
@@ -31,15 +32,15 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({
     return <>{children}</>;
   }
 
-  // Definir um setor padrão se não estiver definido
+  // Setor padrão se não estiver definido
   const userSector = user.sector || 'suporte';
   
-  // Verificar permissões de papel se especificado
+  // Verificar permissões de papel (role) se especificado
   if (allowedRoles.length > 0) {
     const hasAllowedRole = user.role && allowedRoles.includes(user.role);
     
     if (!hasAllowedRole) {
-      // Redirecionar com base no papel do usuário
+      // Redirecionar para o setor do usuário
       return <Navigate to={`/${userSector}`} replace />;
     }
   }

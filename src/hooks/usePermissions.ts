@@ -1,7 +1,5 @@
-// src/hooks/usePermissions.ts
 import { useAuth } from '../contexts/AuthContext';
 import type { SectorType, UserRole } from '../types/common.types';
-import { canEditContent, canAccessSector, hasRole } from '../utils/permissions';
 
 export const usePermissions = () => {
   const { authState } = useAuth();
@@ -18,13 +16,34 @@ export const usePermissions = () => {
     isAdmin: user?.role === 'admin' || user?.role === 'super_admin',
     
     // Verifica se o usuário pode editar conteúdo de um setor
-    canEditContent: (contentSector?: SectorType) => canEditContent(user, contentSector),
+    canEditContent: (contentSector?: SectorType) => {
+      if (!user) return false;
+      
+      // Super admin pode editar qualquer coisa
+      if (user.role === 'super_admin') return true;
+      
+      // Admin pode editar conteúdo do seu setor
+      if (user.role === 'admin' && contentSector === user.sector) return true;
+      
+      return false;
+    },
     
     // Verifica se o usuário pode acessar um setor
-    canAccessSector: (sector: SectorType) => canAccessSector(user, sector),
+    canAccessSector: (sector: SectorType) => {
+      if (!user) return false;
+      
+      // Super admin pode acessar qualquer setor
+      if (user.role === 'super_admin') return true;
+      
+      // Outros usuários só podem acessar seu próprio setor
+      return user.sector === sector;
+    },
     
     // Verifica se o usuário tem um dos papéis permitidos
-    hasRole: (allowedRoles: UserRole[]) => hasRole(user, allowedRoles),
+    hasRole: (allowedRoles: UserRole[]) => {
+      if (!user || !user.role) return false;
+      return allowedRoles.includes(user.role);
+    },
     
     // Retorna o setor atual do usuário
     currentSector: user?.sector || 'suporte',
@@ -33,3 +52,5 @@ export const usePermissions = () => {
     user
   };
 };
+
+export default usePermissions;

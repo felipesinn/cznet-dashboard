@@ -1,5 +1,3 @@
-// src/types/common.types.ts
-
 // Tipos de setores da empresa
 export type SectorType = 'suporte' | 'tecnico' | 'noc' | 'comercial' | 'adm';
 
@@ -14,6 +12,7 @@ export interface ApiError {
   message: string;
   status?: number;
 }
+
 export interface ConfirmDialogProps {
   isOpen: boolean;
   title: string;
@@ -23,5 +22,5 @@ export interface ConfirmDialogProps {
   onConfirm: () => void;
   onCancel: () => void;
   variant?: "default" | "danger";
-  error?: string | null; // Added error prop
+  error?: string | null;
 }

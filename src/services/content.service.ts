@@ -31,17 +31,21 @@ class ContentService {
     return response.data;
   }
   
-  async createContent(data: CreateContentData): Promise<ContentItem> {
-    const formData = this.prepareFormData(data);
-    
-    const response = await api.post<ContentItem>('/content', formData, {
+ async createContent(data: CreateContentData): Promise<ContentItem> {
+  // Se for FormData, enviar como multipart/form-data
+  if (data instanceof FormData) {
+    const response = await api.post<ContentItem>('/content', data, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
     });
-    
     return response.data;
   }
+  
+  // Senão, enviar como JSON
+  const response = await api.post<ContentItem>('/content', data);
+  return response.data;
+}
   
   async updateContent(id: string, data: UpdateContentData): Promise<ContentItem> {
     const formData = this.prepareFormData(data);

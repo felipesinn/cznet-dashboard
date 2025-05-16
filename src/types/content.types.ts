@@ -1,5 +1,3 @@
-// src/types/content.types.ts
-// src/types/content.types.ts
 import type { SectorType } from './common.types';
 
 // Tipos de conteúdo
@@ -32,10 +30,6 @@ export interface ContentCreator {
 
 // Interface para item de conteúdo
 export interface ContentItem {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  steps: boolean | string | any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  images: boolean | string[] | any[];
   id: string | number;
   title: string;
   description?: string;
@@ -46,6 +40,9 @@ export interface ContentItem {
   complexity?: number;
   filePath?: string;
   textContent?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  steps?: any; // Para adições incrementais de conteúdo
+  images?: string[] | { path: string }[];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   mediaItems?: any[];
   createdBy: string;
@@ -80,4 +77,11 @@ export interface UpdateContentData {
   category?: ContentCategory;
   file?: File;
   textContent?: string;
+}
+
+// Interface para adição de conteúdo
+export interface ContentAddition {
+  title?: string;
+  content: string;
+  file?: File;
 }
