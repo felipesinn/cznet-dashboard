@@ -1,8 +1,9 @@
 // src/types/auth.types.ts
-
-// Certifique-se de que estas exportações estejam no topo do arquivo
-export type UserRole = 'super_admin' | 'admin' | 'user';
-export type UserSector = 'suporte' | 'tecnico' | 'noc' | 'comercial' | 'adm';
+// src/types/auth.types.ts
+// src/types/auth.types.ts
+// src/types/auth.types.ts
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import type { UserRole, UserSector } from './common.types';
 
 export interface User {
   id: string;
@@ -21,9 +22,9 @@ export interface LoginCredentials {
   password: string;
 }
 
-export interface ApiError {
-  message: string;
-  status?: number;
+export interface LoginResponse {
+  token: string;
+  user: User;
 }
 
 // Se você tiver alguma interface para conteúdo aqui, mova-a para content.types.ts
@@ -38,6 +39,7 @@ export interface ContentItem {
   createdAt: string;
   // Outros campos necessários
 }
+
 export interface CreateContentData {
   title: string;
   description?: string;
@@ -47,4 +49,8 @@ export interface CreateContentData {
   file?: File;
 }
 
-export type SectorType = 'suporte' | 'tecnico' | 'noc' | 'comercial' | 'adm';
+export interface AuthState {
+  user: User | null;
+  isAuthenticated: boolean;
+  loading: boolean;
+}

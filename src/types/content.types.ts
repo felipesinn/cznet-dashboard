@@ -1,3 +1,7 @@
+// src/types/content.types.ts
+// src/types/content.types.ts
+import type { SectorType } from './common.types';
+
 // Tipos de conteúdo
 export const ContentType = {
   PHOTO: 'photo',
@@ -19,11 +23,6 @@ export const ContentCategory = {
 
 export type ContentCategory = typeof ContentCategory[keyof typeof ContentCategory];
 
-// Setores da empresa
-export type SectorType = 'suporte' | 'tecnico' | 'noc' | 'comercial' | 'adm';
-export type UserRole = 'super_admin' | 'admin' | 'user';
-export type UserSector = 'suporte' | 'tecnico' | 'noc' | 'comercial' | 'adm';
-
 // Interface para criador/editor
 export interface ContentCreator {
   id: string;
@@ -33,8 +32,10 @@ export interface ContentCreator {
 
 // Interface para item de conteúdo
 export interface ContentItem {
-  steps: boolean;
-  images: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  steps: boolean | string | any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  images: boolean | string[] | any[];
   id: string | number;
   title: string;
   description?: string;

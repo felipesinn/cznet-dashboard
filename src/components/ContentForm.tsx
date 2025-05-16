@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { type ContentItem, ContentType, type SectorType } from '../types/content.types';
+import { type ContentItem, ContentType } from '../types/content.types';
+import { type SectorType } from '../types/common.types';
 
 interface ContentFormProps {
   initialData?: ContentItem;

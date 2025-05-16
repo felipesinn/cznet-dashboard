@@ -13,7 +13,8 @@ import {
   Settings
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import type { UserSector } from '../../types/auth.types';
+import type { UserSector } from '../../types/common.types';
+import Logo from '../../assets/Logotipo CZnet.png';
 
 interface ResponsiveLayoutProps {
   children: React.ReactNode;
@@ -122,13 +123,13 @@ const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({
                 </button>
               )}
               
-              <div className="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center text-white font-bold mr-2">
-                CZ
+              <div className="w-12 h-18 flex items-center justify-center">
+                <img src={Logo} alt="" />
               </div>
               <h1 className="text-xl font-bold text-gray-900 hidden sm:block">
                 {title || `CZNet ${sectorNames[currentSector] || 'Portal'}`}
               </h1>
-              <h1 className="text-lg font-bold text-gray-900 sm:hidden">
+              <h1 className="text-lg font-bold text-gray-900">
                 {title ? (title.length > 15 ? title.substring(0, 15) + '...' : title) : `CZ ${sectorNames[currentSector]?.substring(0, 3) || 'Portal'}`}
               </h1>
             </div>

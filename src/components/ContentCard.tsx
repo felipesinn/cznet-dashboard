@@ -125,7 +125,7 @@ const ContentCard: React.FC<ContentCardProps> = ({
               {onEdit && (
                 <button 
                   onClick={() => onEdit(content)}
-                  className="text-gray-500 hover:text-gray-700 font-medium text-sm"
+                  className="text-gray-500 hover:text-gray-100 font-medium text-sm"
                 >
                   Editar
                 </button>
@@ -135,7 +135,7 @@ const ContentCard: React.FC<ContentCardProps> = ({
                 <button 
                   onClick={() => {
                     if (window.confirm('Tem certeza que deseja excluir este conteúdo?')) {
-                      onDelete(content.id);
+                      onDelete(String(content.id));
                     }
                   }}
                   className="text-red-500 hover:text-red-700 font-medium text-sm"

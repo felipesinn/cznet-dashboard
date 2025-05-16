@@ -3,49 +3,36 @@ import api from './api';
 import type { 
   CreateContentData,
   ContentItem,
-  SectorType
-} from '../types/auth.types';
+  UpdateContentData,
+  ContentType
+} from '../types/content.types';
+import type { SectorType } from '../types/common.types';
 
-export const contentService = {
-  // Buscar todos os conteúdos
-  getAllContent: async (sector?: SectorType): Promise<ContentItem[]> => {
+class ContentService {
+  async getAllContent(sector?: SectorType): Promise<ContentItem[]> {
     const params = sector ? { sector } : {};
     const response = await api.get<ContentItem[]>('/content', { params });
     return response.data;
-  },
+  }
   
-  // Buscar conteúdo por ID
-  getContentById: async (id: string): Promise<ContentItem> => {
+  async getContentById(id: string): Promise<ContentItem> {
     const response = await api.get<ContentItem>(`/content/${id}`);
     return response.data;
-  },
+  }
   
-  // Buscar conteúdo por tipo
-  getContentByType: async (type: ContentItem, sector?: SectorType): Promise<ContentItem[]> => {
+  async getContentByType(type: ContentType, sector?: SectorType): Promise<ContentItem[]> {
     const params = sector ? { sector } : {};
     const response = await api.get<ContentItem[]>(`/content/type/${type}`, { params });
     return response.data;
-  },
+  }
   
-  // Buscar conteúdo por setor
-  getContentBySector: async (sector: SectorType): Promise<ContentItem[]> => {
+  async getContentBySector(sector: SectorType): Promise<ContentItem[]> {
     const response = await api.get<ContentItem[]>(`/content/sector/${sector}`);
     return response.data;
-  },
+  }
   
-  // Criar novo conteúdo
-  createContent: async (data: CreateContentData): Promise<ContentItem> => {
-    // Usar FormData para enviar arquivos
-    const formData = new FormData();
-    
-    // Adicionar campos ao FormData
-    formData.append('title', data.title);
-    if (data.description) formData.append('description', data.description);
-    formData.append('type', data.type);
-    formData.append('sector', data.sector);
-    
-    if (data.textContent) formData.append('textContent', data.textContent);
-    if (data.file) formData.append('file', data.file);
+  async createContent(data: CreateContentData): Promise<ContentItem> {
+    const formData = this.prepareFormData(data);
     
     const response = await api.post<ContentItem>('/content', formData, {
       headers: {
@@ -54,19 +41,10 @@ export const contentService = {
     });
     
     return response.data;
-  },
+  }
   
-  // Atualizar conteúdo existente
-  updateContent: async (id: string, data: CreateContentData): Promise<ContentItem> => {
-    // Usar FormData para enviar arquivos
-    const formData = new FormData();
-    
-    // Adicionar campos ao FormData
-    if (data.title) formData.append('title', data.title);
-    if (data.description) formData.append('description', data.description);
-    if (data.sector) formData.append('sector', data.sector);
-    if (data.textContent) formData.append('textContent', data.textContent);
-    if (data.file) formData.append('file', data.file);
+  async updateContent(id: string, data: UpdateContentData): Promise<ContentItem> {
+    const formData = this.prepareFormData(data);
     
     const response = await api.put<ContentItem>(`/content/${id}`, formData, {
       headers: {
@@ -75,18 +53,45 @@ export const contentService = {
     });
     
     return response.data;
-  },
+  }
   
-  // Excluir conteúdo
-  deleteContent: async (id: string): Promise<{ message: string }> => {
-    const response = await api.delete<{ message: string }>(`/content/${id}`);
-    return response.data;
-  },
+  async deleteContent(id: string | number): Promise<boolean> {
+  try {
+    console.log("Excluindo conteúdo ID:", id);
+    
+    // Usar o endpoint correto com ID convertido para string
+    const response = await api.delete(`/content/${id}`);
+    
+    // Verificar resposta
+    if (response.status === 200) {
+      console.log("Exclusão bem-sucedida, resposta:", response.data);
+      return true;
+    } 
+    return false;
+  } catch (error) {
+    console.error("Erro ao excluir conteúdo:", error);
+    throw error;
+  }
+}
   
-  // Obter URL para o arquivo
-  getFileUrl: (filePath: string): string => {
-    // Construir a URL para o arquivo no servidor
-    // Como o arquivo está salvo na pasta 'uploads', precisamos acessar via API
+  getFileUrl(filePath: string): string {
     return `${api.defaults.baseURL}/uploads/${filePath}`;
   }
-};
+  
+  private prepareFormData(data: CreateContentData | UpdateContentData): FormData {
+    const formData = new FormData();
+    
+    // Adicionar campos ao FormData, apenas os definidos
+    Object.entries(data).forEach(([key, value]) => {
+      if (key === 'file' && value instanceof File) {
+        formData.append('file', value);
+      } else if (value !== undefined && value !== null) {
+        formData.append(key, String(value));
+      }
+    });
+    
+    return formData;
+  }
+}
+
+export const contentService = new ContentService();

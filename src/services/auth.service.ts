@@ -1,18 +1,33 @@
+// src/services/auth.service.ts
 import api from './api';
-import type { LoginCredentials, LoginResponse, User } from '../types/auth.types';
+import type { LoginCredentials, LoginResponse, User, AuthState } from '../types/auth.types';
 
-export const authService = {
-  login: async (credentials: LoginCredentials): Promise<LoginResponse> => {
+class AuthService {
+  /**
+   * Realiza login com as credenciais fornecidas
+   */
+  async login(credentials: LoginCredentials): Promise<LoginResponse> {
     const response = await api.post<LoginResponse>('/login', credentials);
+    
+    // Armazenar token e usuário no localStorage
+    this.setToken(response.data.token);
+    this.setUser(response.data.user);
+    
     return response.data;
-  },
+  }
   
-  logout: (): void => {
+  /**
+   * Realiza logout
+   */
+  logout(): void {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-  },
+  }
   
-  getCurrentUser: (): User | null => {
+  /**
+   * Obtém o usuário atual do localStorage
+   */
+  getCurrentUser(): User | null {
     const userStr = localStorage.getItem('user');
     if (!userStr) return null;
     
@@ -28,11 +43,42 @@ export const authService = {
       };
     } catch (error) {
       console.error('Erro ao obter usuário atual:', error);
+      this.logout(); // Limpar dados inválidos
       return null;
     }
-  },
+  }
   
-  isAuthenticated: (): boolean => {
+  /**
+   * Verifica se o usuário está autenticado
+   */
+  isAuthenticated(): boolean {
     return !!localStorage.getItem('token');
   }
-};
+  
+  /**
+   * Obtém o estado inicial de autenticação
+   */
+  getInitialAuthState(): AuthState {
+    return {
+      user: this.getCurrentUser(),
+      isAuthenticated: this.isAuthenticated(),
+      loading: false
+    };
+  }
+  
+  /**
+   * Armazena o token no localStorage
+   */
+  private setToken(token: string): void {
+    localStorage.setItem('token', token);
+  }
+  
+  /**
+   * Armazena o usuário no localStorage
+   */
+  private setUser(user: User): void {
+    localStorage.setItem('user', JSON.stringify(user));
+  }
+}
+
+export const authService = new AuthService();
